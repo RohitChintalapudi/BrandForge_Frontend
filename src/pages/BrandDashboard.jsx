@@ -16,12 +16,13 @@ const BrandDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [winner, setWinner] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showWinner, setShowWinner] = useState(false); // 🔑 FIX STATE
 
   // Fetch campaigns
   const fetchCampaigns = async () => {
     try {
       const res = await api.get("/api/campaigns");
-      setCampaigns(res.data);
+      setCampaigns(res.data || []);
     } catch {
       toast.error("Failed to load campaigns");
     }
@@ -48,11 +49,14 @@ const BrandDashboard = () => {
   const openSubmissions = async (campaign) => {
     setSelectedCampaign(campaign);
     setWinner(null);
+    setShowWinner(false); // 🔴 RESET VISIBILITY
+    setShowConfetti(false);
+
     try {
       const res = await api.get(`/api/submissions/campaign/${campaign._id}`);
-      setSubmissions(res.data);
+      setSubmissions(res.data || []);
 
-      const winning = res.data.find((s) => s.status === "winner");
+      const winning = res.data?.find((s) => s.status === "winner");
       if (winning) setWinner(winning);
     } catch {
       toast.error("Failed to load submissions");
@@ -72,16 +76,21 @@ const BrandDashboard = () => {
       const selected = submissions.find((s) => s._id === id);
       if (selected) {
         setWinner({ ...selected, status: "winner" });
+        setShowWinner(false); // winner exists but hidden
       }
     } catch {
       toast.error("Failed to select winner");
     }
   };
 
-  // View winner
+  // View winner (reveal + confetti)
   const viewWinner = () => {
+    setShowWinner(true);
     setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 5000);
+
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 5000);
   };
 
   return (
@@ -92,130 +101,179 @@ const BrandDashboard = () => {
         <div className="dashboard-blob blob-2"></div>
         <div className="dashboard-blob blob-3"></div>
       </div>
+
       <div className="dashboard">
         <div className="dashboard-header">
           <h2>🏢 Brand Dashboard</h2>
-          <p className="dashboard-subtitle">Create campaigns and select winners</p>
+          <p className="dashboard-subtitle">
+            Create campaigns and select winners
+          </p>
         </div>
 
-      {!selectedCampaign && (
-        <>
-          {/* CREATE CAMPAIGN */}
-          <div className="card premium-card create-card">
-            <h3>Create Campaign</h3>
+        {!selectedCampaign && (
+          <>
+            {/* CREATE CAMPAIGN */}
+            <div className="card premium-card create-card">
+              <h3>Create Campaign</h3>
 
-            <form onSubmit={handleCreate}>
-              <input
-                placeholder="Campaign Title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-              />
+              <form onSubmit={handleCreate}>
+                <input
+                  placeholder="Campaign Title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                />
 
-              <textarea
-                placeholder="Campaign Description"
-                value={form.description}
-                onChange={(e) =>
-                  setForm({ ...form, description: e.target.value })
-                }
-                required
-              />
+                <textarea
+                  placeholder="Campaign Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      description: e.target.value,
+                    })
+                  }
+                  required
+                />
 
-              <input
-                placeholder="Reward (e.g ₹5000)"
-                value={form.reward}
-                onChange={(e) => setForm({ ...form, reward: e.target.value })}
-                required
-              />
+                <input
+                  placeholder="Reward (e.g ₹5000)"
+                  value={form.reward}
+                  onChange={(e) => setForm({ ...form, reward: e.target.value })}
+                  required
+                />
 
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                required
-              />
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      deadline: e.target.value,
+                    })
+                  }
+                  required
+                />
 
-              <button className="action-btn premium-btn">Create Campaign</button>
-            </form>
-          </div>
-
-          {/* CAMPAIGN LIST */}
-          <div className="grid" style={{ marginTop: "2rem" }}>
-            {campaigns.filter(c => c && c._id).map((c) => (
-              <div className="card premium-card" key={c._id}>
-                <div className="card-header">
-                  <h3>{c.title || "Untitled Campaign"}</h3>
-                  {c.status && (
-                    <span className={`badge ${c.status}`}>
-                      {c.status === "pending" && "Pending Approval"}
-                      {c.status === "approved" && "Approved"}
-                    </span>
-                  )}
-                </div>
-                <p className="card-description">{c.description || "No description available"}</p>
-                <button
-                  className="action-btn premium-btn"
-                  style={{ marginTop: "0.8rem" }}
-                  onClick={() => openSubmissions(c)}
-                >
-                  View Submissions
+                <button className="action-btn premium-btn">
+                  Create Campaign
                 </button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              </form>
+            </div>
 
-      {/* SUBMISSIONS VIEW */}
-      {selectedCampaign && (
-        <>
-          <button
-            className="action-btn premium-btn back-btn"
-            onClick={() => setSelectedCampaign(null)}
-          >
-            ← Back
-          </button>
+            {/* CAMPAIGN LIST */}
+            <div className="grid" style={{ marginTop: "2rem" }}>
+              {campaigns
+                .filter((c) => c && c._id)
+                .map((c) => (
+                  <div className="card premium-card" key={c._id}>
+                    <div className="card-header">
+                      <h3>{c.title || "Untitled Campaign"}</h3>
+                      {c.status && (
+                        <span className={`badge ${c.status}`}>
+                          {c.status === "pending" && "Pending Approval"}
+                          {c.status === "approved" && "Approved"}
+                        </span>
+                      )}
+                    </div>
 
-          <h3 className="section-title">Submissions</h3>
+                    <p className="card-description">
+                      {c.description || "No description available"}
+                    </p>
 
-          {winner && (
-            <div className="card premium-card winner-card" style={{ marginBottom: "2rem" }}>
-              <h3>🏆 Winner Selected</h3>
-              <p>
-                <strong>{winner.creator?.name}</strong>
-              </p>
-              <button className="action-btn premium-btn" onClick={viewWinner}>
+                    <button
+                      className="action-btn premium-btn"
+                      style={{ marginTop: "0.8rem" }}
+                      onClick={() => openSubmissions(c)}
+                    >
+                      View Submissions
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </>
+        )}
+
+        {/* SUBMISSIONS VIEW */}
+        {selectedCampaign && (
+          <>
+            <button
+              className="action-btn premium-btn back-btn"
+              onClick={() => {
+                setSelectedCampaign(null);
+                setShowWinner(false);
+                setShowConfetti(false);
+              }}
+            >
+              ← Back
+            </button>
+
+            <h3 className="section-title">Submissions</h3>
+
+            {/* VIEW WINNER BUTTON */}
+            {winner && !showWinner && (
+              <button
+                className="action-btn premium-btn"
+                style={{ marginBottom: "1.5rem" }}
+                onClick={viewWinner}
+              >
                 View Winner 🎉
               </button>
-            </div>
-          )}
+            )}
 
-          <div className="grid">
-            {submissions.map((s) => (
-              <div className="card premium-card" key={s._id}>
+            {/* WINNER CARD (REVEALED ONLY ON CLICK) */}
+            {winner && showWinner && (
+              <div
+                className="card premium-card winner-card"
+                style={{ marginBottom: "2rem" }}
+              >
+                <h3>🏆 Winner Selected</h3>
                 <p>
-                  <strong>Creator:</strong> {s.creator?.name}
+                  <strong>{winner.creator?.name}</strong>
                 </p>
 
-                <a href={s.contentUrl} target="_blank" rel="noreferrer" className="content-link">
-                  View Content
+                <a
+                  href={winner.contentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="content-link"
+                >
+                  View Winning Content
                 </a>
-
-                {s.status === "winner" ? (
-                  <span className="badge winner">🏆 Winner</span>
-                ) : (
-                  <button
-                    className="action-btn premium-btn"
-                    onClick={() => selectWinner(s._id)}
-                  >
-                    Select Winner
-                  </button>
-                )}
               </div>
-            ))}
-          </div>
-        </>
-      )}
+            )}
+
+            <div className="grid">
+              {submissions.map((s) => (
+                <div className="card premium-card" key={s._id}>
+                  <p>
+                    <strong>Creator:</strong> {s.creator?.name}
+                  </p>
+
+                  <a
+                    href={s.contentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="content-link"
+                  >
+                    View Content
+                  </a>
+
+                  {s.status === "winner" ? (
+                    <span className="badge winner">🏆 Winner</span>
+                  ) : (
+                    <button
+                      className="action-btn premium-btn"
+                      onClick={() => selectWinner(s._id)}
+                    >
+                      Select Winner
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

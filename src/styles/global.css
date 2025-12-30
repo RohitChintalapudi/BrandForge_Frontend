@@ -209,7 +209,7 @@ textarea {
 }
 
 .auth-background {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   background: radial-gradient(circle at 20% 50%, rgba(255, 122, 24, 0.15), transparent 50%),
@@ -268,7 +268,7 @@ textarea {
 }
 
 .auth-container {
-  position: relative;
+  position: fixed;
   z-index: 1;
   width: 100%;
   max-width: 450px;
@@ -855,4 +855,24 @@ a:hover {
 }
 .badge.winner {
   background: #a855f7;
+}
+.modal {
+  position: relative;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
