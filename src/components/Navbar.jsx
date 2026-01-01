@@ -23,7 +23,6 @@ const Navbar = () => {
       <h2>BrandForge</h2>
 
       <div>
-        {/* Show Login/Register ONLY when not logged in */}
         {!user && (
           <>
             <Link to="/login">Login</Link>
@@ -31,7 +30,6 @@ const Navbar = () => {
           </>
         )}
 
-        {/* Show Logout ONLY when logged in AND not on auth pages */}
         {user && !isAuthPage && (
           <button className="action-btn" onClick={handleLogout}>
             Logout

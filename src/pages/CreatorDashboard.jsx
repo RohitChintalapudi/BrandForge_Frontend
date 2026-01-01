@@ -9,7 +9,6 @@ const CreatorDashboard = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [contentUrl, setContentUrl] = useState("");
 
-  // Load campaigns + my submissions + wins
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -74,7 +73,6 @@ const CreatorDashboard = () => {
           </p>
         </div>
 
-        {/* 🎉 CONGRATULATIONS BANNER */}
         {wins.length > 0 && (
           <div className="congratulations-banner">
             <div className="banner-content">
@@ -120,7 +118,6 @@ const CreatorDashboard = () => {
           </div>
         )}
 
-        {/* 📢 AVAILABLE CAMPAIGNS */}
         <div className="section">
           <h3 className="section-title">Available Campaigns</h3>
 
@@ -154,11 +151,9 @@ const CreatorDashboard = () => {
         </div>
       </div>
 
-      {/* 🪟 SUBMIT MODAL */}
       {selectedCampaign && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            {/* ❌ CLOSE BUTTON */}
             <button className="modal-close-btn" onClick={closeModal}>
               ✕
             </button>

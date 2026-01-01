@@ -9,18 +9,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
 
   const navigate = useNavigate();
-  const navigationType = useNavigationType(); // detects BACK vs LINK
+  const navigationType = useNavigationType();
   const { user, setUser } = useAuth();
 
-  /**
-   * Redirect ONLY when:
-   * - user is already logged in
-   * - user came here using BACK button (POP)
-   *
-   * This allows:
-   * ✅ Landing page → Login button → Login page
-   * ❌ Dashboard → Back → Login page
-   */
   useEffect(() => {
     if (user && navigationType === "POP") {
       if (user.role === "admin") navigate("/admin", { replace: true });
@@ -40,7 +31,6 @@ const Login = () => {
 
       toast.success("Login successful");
 
-      // replace: true removes /login from history
       if (me.data.role === "admin") navigate("/admin", { replace: true });
       if (me.data.role === "brand") navigate("/brand", { replace: true });
       if (me.data.role === "creator") navigate("/creator", { replace: true });

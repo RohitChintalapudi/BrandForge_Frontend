@@ -16,9 +16,8 @@ const BrandDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [winner, setWinner] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showWinner, setShowWinner] = useState(false); // 🔑 FIX STATE
+  const [showWinner, setShowWinner] = useState(false); 
 
-  // Fetch campaigns
   const fetchCampaigns = async () => {
     try {
       const res = await api.get("/api/campaigns");
@@ -32,7 +31,6 @@ const BrandDashboard = () => {
     fetchCampaigns();
   }, []);
 
-  // Create campaign
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
@@ -45,11 +43,10 @@ const BrandDashboard = () => {
     }
   };
 
-  // View submissions
   const openSubmissions = async (campaign) => {
     setSelectedCampaign(campaign);
     setWinner(null);
-    setShowWinner(false); // 🔴 RESET VISIBILITY
+    setShowWinner(false); 
     setShowConfetti(false);
 
     try {
@@ -63,7 +60,6 @@ const BrandDashboard = () => {
     }
   };
 
-  // Select winner
   const selectWinner = async (id) => {
     try {
       await api.put(`/api/submissions/${id}/winner`);
@@ -76,14 +72,13 @@ const BrandDashboard = () => {
       const selected = submissions.find((s) => s._id === id);
       if (selected) {
         setWinner({ ...selected, status: "winner" });
-        setShowWinner(false); // winner exists but hidden
+        setShowWinner(false);
       }
     } catch {
       toast.error("Failed to select winner");
     }
   };
 
-  // View winner (reveal + confetti)
   const viewWinner = () => {
     setShowWinner(true);
     setShowConfetti(true);
@@ -112,7 +107,6 @@ const BrandDashboard = () => {
 
         {!selectedCampaign && (
           <>
-            {/* CREATE CAMPAIGN */}
             <div className="card premium-card create-card">
               <h3>Create Campaign</h3>
 
@@ -161,7 +155,6 @@ const BrandDashboard = () => {
               </form>
             </div>
 
-            {/* CAMPAIGN LIST */}
             <div className="grid" style={{ marginTop: "2rem" }}>
               {campaigns
                 .filter((c) => c && c._id)
@@ -194,7 +187,6 @@ const BrandDashboard = () => {
           </>
         )}
 
-        {/* SUBMISSIONS VIEW */}
         {selectedCampaign && (
           <>
             <button
@@ -210,7 +202,6 @@ const BrandDashboard = () => {
 
             <h3 className="section-title">Submissions</h3>
 
-            {/* VIEW WINNER BUTTON */}
             {winner && !showWinner && (
               <button
                 className="action-btn premium-btn"
@@ -221,7 +212,6 @@ const BrandDashboard = () => {
               </button>
             )}
 
-            {/* WINNER CARD (REVEALED ONLY ON CLICK) */}
             {winner && showWinner && (
               <div
                 className="card premium-card winner-card"
