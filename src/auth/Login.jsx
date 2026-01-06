@@ -80,7 +80,7 @@ const Login = () => {
 
           <div className="auth-footer">
             <p>
-              Don&apos;t have an account? <Link to="/register">Sign up</Link>
+              Don't have an account? <Link to="/register">Sign up</Link>
             </p>
           </div>
         </form>
