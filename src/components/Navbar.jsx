@@ -22,7 +22,7 @@ const Navbar = () => {
     <nav className="navbar">
       <h2>BrandForge</h2>
 
-      <div>
+      <div className="navbar-links">
         {!user && (
           <>
             <Link to="/login">Login</Link>
