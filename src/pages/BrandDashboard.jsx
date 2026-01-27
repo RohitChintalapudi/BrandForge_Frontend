@@ -91,18 +91,13 @@ const BrandDashboard = () => {
   return (
     <div className="dashboard-wrapper">
       {showConfetti && <Confetti />}
-      <div className="dashboard-background">
-        <div className="dashboard-blob blob-1"></div>
-        <div className="dashboard-blob blob-2"></div>
-        <div className="dashboard-blob blob-3"></div>
-      </div>
 
       <div className="dashboard">
         <div className="dashboard-header">
           <h2>🏢 Brand Dashboard</h2>
-          <p className="dashboard-subtitle">
+          <b className="dashboard-subtitle">
             Create campaigns and select winners
-          </p>
+          </b>
         </div>
 
         {!selectedCampaign && (
@@ -110,7 +105,7 @@ const BrandDashboard = () => {
             <div className="card premium-card create-card">
               <h3>Create Campaign</h3>
 
-              <form onSubmit={handleCreate}>
+              <form onSubmit={handleCreate} className="forms">
                 <input
                   placeholder="Campaign Title"
                   value={form.title}

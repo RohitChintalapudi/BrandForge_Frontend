@@ -59,33 +59,29 @@ const CreatorDashboard = () => {
 
   return (
     <div className="dashboard-wrapper">
-      <div className="dashboard-background">
-        <div className="dashboard-blob blob-1"></div>
-        <div className="dashboard-blob blob-2"></div>
-        <div className="dashboard-blob blob-3"></div>
-      </div>
-
       <div className="dashboard">
+        {/* HEADER */}
         <div className="dashboard-header">
           <h2>🎨 Creator Dashboard</h2>
-          <p className="dashboard-subtitle">
+          <b className="dashboard-subtitle">
             Discover campaigns and showcase your creativity
-          </p>
+          </b>
         </div>
 
+        {/* 🎉 CONGRATULATIONS CARD */}
         {wins.length > 0 && (
-          <div className="congratulations-banner">
-            <div className="banner-content">
-              <div className="banner-icon">🎉</div>
-              <div className="banner-text">
-                <h3>Congratulations! You've won a campaign.</h3>
-                <p>
-                  You have {wins.length} {wins.length === 1 ? "win" : "wins"}!
-                  Keep it up.
+          <div className="section">
+            <div className="card congrats-card">
+
+              <div className="congrats-content">
+                <h3 className="congo-title">✨Congratulations!✨</h3>
+                <b className="congrats-title">You’ve won a campaign 🎯</b>
+                <p className="congrats-subtitle">
+                  You have <strong>{wins.length}</strong>{" "}
+                  {wins.length === 1 ? "win" : "wins"} so far. Keep it up!
                 </p>
               </div>
             </div>
-            <div className="banner-shine"></div>
           </div>
         )}
 
@@ -96,19 +92,17 @@ const CreatorDashboard = () => {
 
             <div className="grid">
               {wins.map((w) => (
-                <div className="card premium-card winner-card" key={w._id}>
-                  <div className="card-header">
-                    <h3>{w.campaign?.title}</h3>
-                    <span className="badge winner">Winner</span>
-                  </div>
-
+                <div className="card" key={w._id}>
+                  <h3>{w.campaign?.title || "Campaign"}</h3>
                   <p className="card-description">🎉 You won this campaign.</p>
+
+                  <span className="badge">Winner</span>
 
                   <a
                     href={w.contentUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="content-link"
+                    className="content-link submit-link"
                   >
                     View Submission
                   </a>
@@ -118,6 +112,7 @@ const CreatorDashboard = () => {
           </div>
         )}
 
+        {/* 📢 AVAILABLE CAMPAIGNS */}
         <div className="section">
           <h3 className="section-title">Available Campaigns</h3>
 
@@ -128,19 +123,16 @@ const CreatorDashboard = () => {
                 const submitted = hasSubmitted(c._id);
 
                 return (
-                  <div className="card premium-card" key={c._id}>
+                  <div className="card" key={c._id}>
                     <h3>{c.title || "Untitled Campaign"}</h3>
                     <p className="card-description">
                       {c.description || "No description available"}
                     </p>
 
                     {submitted ? (
-                      <span className="badge approved">Submitted</span>
+                      <span className="badge">Submitted</span>
                     ) : (
-                      <button
-                        className="action-btn premium-btn"
-                        onClick={() => setSelectedCampaign(c)}
-                      >
+                      <button className="submitContent" onClick={() => setSelectedCampaign(c)}>
                         Submit Content
                       </button>
                     )}
@@ -151,6 +143,7 @@ const CreatorDashboard = () => {
         </div>
       </div>
 
+      {/* MODAL */}
       {selectedCampaign && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -168,11 +161,7 @@ const CreatorDashboard = () => {
                 required
               />
 
-              <button
-                type="submit"
-                className="action-btn premium-btn"
-                style={{ marginTop: "1rem" }}
-              >
+              <button type="submit" style={{ marginTop: "1rem" }}>
                 Submit
               </button>
             </form>

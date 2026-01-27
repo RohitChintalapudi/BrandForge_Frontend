@@ -41,12 +41,6 @@ const Login = () => {
 
   return (
     <div className="auth-page">
-      <div className="auth-background">
-        <div className="gradient-blob blob-1"></div>
-        <div className="gradient-blob blob-2"></div>
-        <div className="gradient-blob blob-3"></div>
-      </div>
-
       <div className="auth-container">
         <form className="auth-form" onSubmit={handleLogin}>
           <div className="auth-header">
