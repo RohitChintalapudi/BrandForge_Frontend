@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { toast } from "react-toastify";
+import {
+  getCampaignIdFromRef,
+  prizeForWin,
+  titleForWin,
+} from "../utils/creatorPrizes";
 
 const CreatorDashboard = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -31,7 +36,9 @@ const CreatorDashboard = () => {
   }, []);
 
   const hasSubmitted = (campaignId) =>
-    mySubmissions.some((s) => s.campaign === campaignId);
+    mySubmissions.some(
+      (s) => getCampaignIdFromRef(s.campaign) === String(campaignId)
+    );
 
   const closeModal = () => {
     setSelectedCampaign(null);
@@ -93,8 +100,15 @@ const CreatorDashboard = () => {
             <div className="grid">
               {wins.map((w) => (
                 <div className="card" key={w._id}>
-                  <h3>{w.campaign?.title || "Campaign"}</h3>
+                  <h3>{titleForWin(w, campaigns)}</h3>
                   <p className="card-description">🎉 You won this campaign.</p>
+                  {prizeForWin(w, campaigns) ? (
+                    <p className="prize-won-line card-prize">
+                      Prize won:{" "}
+                      <strong>{prizeForWin(w, campaigns)}</strong>
+                      <sup className="fee-asterisk">*</sup>
+                    </p>
+                  ) : null}
 
                   <span className="badge">Winner</span>
 
@@ -109,6 +123,11 @@ const CreatorDashboard = () => {
                 </div>
               ))}
             </div>
+            {wins.some((w) => prizeForWin(w, campaigns)) && (
+              <p className="platform-fee-note section-fee-note">
+                * 5% will be debited as a platform fee from your payout.
+              </p>
+            )}
           </div>
         )}
 

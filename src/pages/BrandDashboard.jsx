@@ -145,11 +145,11 @@ const BrandDashboard = () => {
                 />
 
                 <button className="action-btn premium-btn">
-                  Create Campaign
+                  Create Campaign (3% of reward will be deducted as platform fee)
                 </button>
               </form>
             </div>
-
+              <h3>Campaigns created by you</h3>
             <div className="grid" style={{ marginTop: "2rem" }}>
               {campaigns
                 .filter((c) => c && c._id)

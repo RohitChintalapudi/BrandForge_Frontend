@@ -96,6 +96,30 @@ a:hover {
   gap: 1.4rem;
 }
 
+.navbar-total-won {
+  font-size: 0.88rem;
+  color: var(--text-main);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  cursor: help;
+  white-space: nowrap;
+}
+
+.navbar-total-won strong {
+  color: var(--purple-2);
+  font-weight: 700;
+}
+
+.navbar-total-asterisk {
+  margin-left: 0.12rem;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: var(--purple-2);
+  vertical-align: super;
+}
+
 .navbar a {
   font-size: 0.9rem;
   font-weight: 500;
@@ -245,6 +269,69 @@ select:focus {
   margin-left: 20px;
   color: var(--text-muted);
   max-width: 520px;
+}
+
+.prize-summary {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.prize-won-line {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.prize-won-line strong {
+  color: var(--purple-2);
+  font-size: 1.05rem;
+}
+
+.card-prize {
+  margin-top: 0.5rem;
+}
+
+.prize-won-label {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.prize-won-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.prize-won-list li {
+  margin: 0.25rem 0;
+}
+
+.prize-campaign-title {
+  color: var(--text-muted);
+}
+
+.fee-asterisk {
+  margin-left: 0.15rem;
+  font-size: 0.65em;
+  font-weight: 700;
+  color: var(--purple-2);
+  vertical-align: super;
+}
+
+.platform-fee-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.section-fee-note {
+  margin-top: 1rem;
+  max-width: 720px;
 }
 .card-description{
   font-weight: bold;
