@@ -56,7 +56,7 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <h2>BrandForge</h2>
+      <h2 className="brand">Brand<span className="forge">forge.</span></h2>
 
       <div className="navbar-links">
         {!user && (

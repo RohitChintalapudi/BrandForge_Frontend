@@ -25,6 +25,14 @@
   --shadow-md: 0 6px 18px rgba(17, 24, 39, 0.08);
   --shadow-lg: 0 12px 32px rgba(17, 24, 39, 0.12);
 }
+.brand{
+  color: black !important;
+  font-size: 2rem;
+  font-weight: bold;
+}
+.forge{
+  color: var(--purple-2);
+}
 
 /* =====================================================
    RESET & BASE
