@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { toast } from "react-toastify";
 import Confetti from "react-confetti";
+import { useAuth } from "../context/AuthContext";
 
 const BrandDashboard = () => {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -17,6 +19,29 @@ const BrandDashboard = () => {
   const [winner, setWinner] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showWinner, setShowWinner] = useState(false); 
+
+  const currentUserId = String(user?._id ?? user?.id ?? "");
+
+  const getIdValue = (value) => {
+    if (value == null) return null;
+    if (typeof value === "object") return String(value._id ?? value.id ?? "");
+    return String(value);
+  };
+
+  const isCampaignOwnedByCurrentBrand = (campaign) => {
+    if (!currentUserId || !campaign) return false;
+    const ownerRefs = [
+      campaign.brand,
+      campaign.createdBy,
+      campaign.owner,
+      campaign.user,
+      campaign.brandId,
+      campaign.createdById,
+      campaign.ownerId,
+      campaign.userId,
+    ];
+    return ownerRefs.some((ref) => getIdValue(ref) === currentUserId);
+  };
 
   const fetchCampaigns = async () => {
     try {
@@ -152,7 +177,9 @@ const BrandDashboard = () => {
               <h3>Campaigns created by you</h3>
             <div className="grid" style={{ marginTop: "2rem" }}>
               {campaigns
-                .filter((c) => c && c._id)
+                .filter(
+                  (c) => c && c._id && isCampaignOwnedByCurrentBrand(c)
+                )
                 .map((c) => (
                   <div className="card premium-card" key={c._id}>
                     <div className="card-header">
