@@ -12,6 +12,7 @@ const CreatorDashboard = () => {
   const [mySubmissions, setMySubmissions] = useState([]);
   const [wins, setWins] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [viewCampaign, setViewCampaign] = useState(null);
   const [contentUrl, setContentUrl] = useState("");
 
   useEffect(() => {
@@ -39,6 +40,17 @@ const CreatorDashboard = () => {
     mySubmissions.some(
       (s) => getCampaignIdFromRef(s.campaign) === String(campaignId)
     );
+
+  const formatDeadline = (value) => {
+    if (!value) return "Not specified";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
   const closeModal = () => {
     setSelectedCampaign(null);
@@ -148,13 +160,31 @@ const CreatorDashboard = () => {
                       {c.description || "No description available"}
                     </p>
 
-                    {submitted ? (
-                      <span className="badge">Submitted</span>
-                    ) : (
-                      <button className="submitContent" onClick={() => setSelectedCampaign(c)}>
-                        Submit Content
+                    <div style={{ marginTop: "0.6rem", display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                      {submitted ? (
+                        <span className="badge">Submitted</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="submitContent"
+                          onClick={() => setSelectedCampaign(c)}
+                        >
+                          Submit Content
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="action-btn"
+                        style={{
+                          background: "transparent",
+                          color: "var(--purple-2)",
+                          paddingInline: 0,
+                        }}
+                        onClick={() => setViewCampaign(c)}
+                      >
+                        View details
                       </button>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -162,7 +192,7 @@ const CreatorDashboard = () => {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* SUBMIT MODAL */}
       {selectedCampaign && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -184,6 +214,45 @@ const CreatorDashboard = () => {
                 Submit
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CAMPAIGN DETAILS MODAL */}
+      {viewCampaign && (
+        <div
+          className="modal-overlay"
+          onClick={() => setViewCampaign(null)}
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close-btn"
+              onClick={() => setViewCampaign(null)}
+            >
+              ✕
+            </button>
+
+            <h3>{viewCampaign.title || "Untitled Campaign"}</h3>
+            <p style={{ marginTop: "0.8rem" }}>
+              {viewCampaign.description || "No description available"}
+            </p>
+            {viewCampaign.reward && (
+              <p style={{ marginTop: "1rem", fontWeight: 600 }}>
+                Reward:{" "}
+                <span style={{ fontWeight: 700 }}>{viewCampaign.reward}</span>
+              </p>
+            )}
+            {viewCampaign.deadline && (
+              <p style={{ marginTop: "0.6rem", fontSize: "0.9rem" }}>
+                Deadline:{" "}
+                <span style={{ fontWeight: 500 }}>
+                  {formatDeadline(viewCampaign.deadline)}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       )}
