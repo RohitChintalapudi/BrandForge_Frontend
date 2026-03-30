@@ -52,6 +52,15 @@ const CreatorDashboard = () => {
     });
   };
 
+  const shortDescription = (text, maxChars = 90) => {
+    const s = (text ?? "").toString().trim();
+    if (!s) return "No description available";
+    if (s.length <= maxChars) return s;
+    const cut = s.slice(0, maxChars);
+    const lastSpace = cut.lastIndexOf(" ");
+    return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
+  };
+
   const closeModal = () => {
     setSelectedCampaign(null);
     setContentUrl("");
@@ -157,7 +166,7 @@ const CreatorDashboard = () => {
                   <div className="card" key={c._id}>
                     <h3>{c.title || "Untitled Campaign"}</h3>
                     <p className="card-description">
-                      {c.description || "No description available"}
+                      {shortDescription(c.description)}
                     </p>
 
                     <div style={{ marginTop: "0.6rem", display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
@@ -204,11 +213,32 @@ const CreatorDashboard = () => {
 
             <form onSubmit={submitContent}>
               <input
-                placeholder="Paste YouTube / Instagram / Drive link"
+                placeholder="Paste Drive link or media link"
                 value={contentUrl}
                 onChange={(e) => setContentUrl(e.target.value)}
                 required
               />
+
+              <div
+                style={{
+                  marginTop: "0.9rem",
+                  padding: "0.8rem",
+                  border: "1px solid var(--border-light)",
+                  borderRadius: "10px",
+                  background: "var(--white-1)",
+                }}
+              >
+                <p style={{ margin: 0, fontWeight: 700, color: "var(--purple-2)" }}>
+                  Minimum submission requirements
+                </p>
+                <ul style={{ margin: "0.55rem 0 0", paddingLeft: "1rem", fontSize: "0.88rem" }}>
+                  <li>Video quality should be at least 1080p (Full HD).</li>
+                  <li>Keep video clear, stable, and well-lit (no blurry footage).</li>
+                  <li>Audio must be understandable with minimal background noise.</li>
+                  <li>Your content should match the campaign brief and brand tone.</li>
+                  <li>Submit a public, accessible Drive link or media link.</li>
+                </ul>
+              </div>
 
               <button type="submit" style={{ marginTop: "1rem" }}>
                 Submit

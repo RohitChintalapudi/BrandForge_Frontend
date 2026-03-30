@@ -43,6 +43,15 @@ const BrandDashboard = () => {
     return ownerRefs.some((ref) => getIdValue(ref) === currentUserId);
   };
 
+  const shortDescription = (text, maxChars = 90) => {
+    const s = (text ?? "").toString().trim();
+    if (!s) return "No description available";
+    if (s.length <= maxChars) return s;
+    const cut = s.slice(0, maxChars);
+    const lastSpace = cut.lastIndexOf(" ");
+    return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
+  };
+
   const fetchCampaigns = async () => {
     try {
       const res = await api.get("/api/campaigns");
@@ -193,7 +202,7 @@ const BrandDashboard = () => {
                     </div>
 
                     <p className="card-description">
-                      {c.description || "No description available"}
+                      {shortDescription(c.description)}
                     </p>
 
                     <button
@@ -257,30 +266,51 @@ const BrandDashboard = () => {
 
             <div className="grid">
               {submissions.map((s) => (
-                <div className="card premium-card" key={s._id}>
-                  <p>
-                    <strong>Creator:</strong> {s.creator?.name}
-                  </p>
+                <div className="card premium-card submission-card" key={s._id}>
+                  <div className="submission-top">
+                    <div className="submission-creator">
+                      <div className="submission-avatar">
+                        {(s.creator?.name || "C").slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="submission-creator-meta">
+                        <div className="submission-creator-label">Creator</div>
+                        <div className="submission-creator-name">
+                          {s.creator?.name || "Unknown"}
+                        </div>
+                      </div>
+                    </div>
 
-                  <a
-                    href={s.contentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="content-link"
-                  >
-                    View Content
-                  </a>
+                    {s.status === "winner" ? (
+                      <span className="submission-status submission-status--winner">
+                        🏆 Winner
+                      </span>
+                    ) : (
+                      <span className="submission-status submission-status--new">
+                        New
+                      </span>
+                    )}
+                  </div>
 
-                  {s.status === "winner" ? (
-                    <span className="badge winner">🏆 Winner</span>
-                  ) : (
-                    <button
-                      className="action-btn premium-btn"
-                      onClick={() => selectWinner(s._id)}
+                  <div className="submission-actions">
+                    <a
+                      href={s.contentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="submission-link"
                     >
-                      Select Winner
-                    </button>
-                  )}
+                      View Content
+                    </a>
+
+                    {s.status !== "winner" && (
+                      <button
+                        type="button"
+                        className="submission-btn"
+                        onClick={() => selectWinner(s._id)}
+                      >
+                        Select Winner
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
