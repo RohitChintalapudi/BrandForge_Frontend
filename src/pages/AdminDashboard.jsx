@@ -50,17 +50,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const rejectCampaign = async (id) => {
-    try {
-      await api.put(`/api/campaigns/${id}/reject`);
-      toast.success("Campaign rejected");
-      setCampaigns((prev) => prev.filter((c) => c._id !== id));
-      setViewCampaign((v) => (v && v._id === id ? null : v));
-    } catch {
-      toast.error("Rejection failed");
-    }
-  };
-
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard-background">
@@ -103,13 +92,6 @@ const AdminDashboard = () => {
                       onClick={() => approveCampaign(c._id)}
                     >
                       Approve Campaign
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-btn-reject"
-                      onClick={() => rejectCampaign(c._id)}
-                    >
-                      Reject Campaign
                     </button>
                     <button
                       type="button"
@@ -176,13 +158,6 @@ const AdminDashboard = () => {
                 onClick={() => approveCampaign(viewCampaign._id)}
               >
                 Approve
-              </button>
-              <button
-                type="button"
-                className="admin-btn-reject"
-                onClick={() => rejectCampaign(viewCampaign._id)}
-              >
-                Reject
               </button>
             </div>
           </div>
