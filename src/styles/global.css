@@ -403,6 +403,33 @@ select:focus {
 }
 
 /* =====================================================
+   ADMIN DASHBOARD — CARD ACTIONS
+===================================================== */
+.admin-card-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-btn-reject {
+  border-radius: 999px;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #b91c1c;
+  background: var(--white-0);
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.admin-btn-reject:hover {
+  background: rgba(185, 28, 28, 0.06);
+  transform: translateY(-1px);
+}
+
+/* =====================================================
    BRAND DASHBOARD — SUBMISSION CARDS
 ===================================================== */
 .submission-card {

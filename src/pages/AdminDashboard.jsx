@@ -17,6 +17,15 @@ const AdminDashboard = () => {
     });
   };
 
+  const shortDescription = (text, maxChars = 90) => {
+    const s = (text ?? "").toString().trim();
+    if (!s) return "No description available";
+    if (s.length <= maxChars) return s;
+    const cut = s.slice(0, maxChars);
+    const lastSpace = cut.lastIndexOf(" ");
+    return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
+  };
+
   const fetchPending = async () => {
     try {
       const res = await api.get("/api/campaigns/pending");
@@ -35,8 +44,20 @@ const AdminDashboard = () => {
       await api.put(`/api/campaigns/${id}/approve`);
       toast.success("Campaign approved");
       setCampaigns((prev) => prev.filter((c) => c._id !== id));
+      setViewCampaign((v) => (v && v._id === id ? null : v));
     } catch {
       toast.error("Approval failed");
+    }
+  };
+
+  const rejectCampaign = async (id) => {
+    try {
+      await api.put(`/api/campaigns/${id}/reject`);
+      toast.success("Campaign rejected");
+      setCampaigns((prev) => prev.filter((c) => c._id !== id));
+      setViewCampaign((v) => (v && v._id === id ? null : v));
+    } catch {
+      toast.error("Rejection failed");
     }
   };
 
@@ -69,19 +90,26 @@ const AdminDashboard = () => {
                   <span className="badge pending">Pending</span>
                 </div>
                 <p className="card-description">
-                  {c.description || "No description available"}
+                  {shortDescription(c.description)}
                 </p>
                 <div className="card-footer">
                   <p className="reward-text">
                     <strong>Reward:</strong> {c.reward || "Not specified"}
                   </p>
-                  <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                  <div className="admin-card-actions">
                     <button
                       type="button"
                       className="action-btn premium-btn"
                       onClick={() => approveCampaign(c._id)}
                     >
                       Approve Campaign
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn-reject"
+                      onClick={() => rejectCampaign(c._id)}
+                    >
+                      Reject Campaign
                     </button>
                     <button
                       type="button"
@@ -134,6 +162,29 @@ const AdminDashboard = () => {
                 {formatDeadline(viewCampaign.deadline)}
               </span>
             </p>
+            <div
+              style={{
+                marginTop: "1.25rem",
+                display: "flex",
+                gap: "0.6rem",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                className="action-btn premium-btn"
+                onClick={() => approveCampaign(viewCampaign._id)}
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                className="admin-btn-reject"
+                onClick={() => rejectCampaign(viewCampaign._id)}
+              >
+                Reject
+              </button>
+            </div>
           </div>
         </div>
       )}
