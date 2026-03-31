@@ -266,6 +266,17 @@ select:focus {
   margin-bottom: 2.4rem;
 }
 
+.brand-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+.brand-header-left {
+  min-width: 0;
+}
+
 .dashboard-header h2 {
   margin: 0 0 0.35rem;
   font-size: 2rem;

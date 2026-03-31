@@ -52,6 +52,44 @@ const BrandDashboard = () => {
     return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
   };
 
+  const COMMISSION_RATE = 0.03; // 3% cut from reward
+  const DEFAULT_BRAND_TOTAL = 50000;
+
+  const parseRewardToNumber = (reward) => {
+    if (reward == null) return null;
+    const raw = String(reward).trim();
+    if (!raw) return null;
+    const cleaned = raw.replace(/,/g, "").replace(/[^\d.]/g, "");
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const ownedCampaignsForCommission = campaigns.filter(
+    (c) => c && c._id && isCampaignOwnedByCurrentBrand(c)
+  );
+
+  // Some backends may return duplicate campaign entries; avoid double counting.
+  const uniqueOwnedCampaignsForCommission = Array.from(
+    new Map(
+      ownedCampaignsForCommission.map((c) => [String(c._id), c])
+    ).values()
+  );
+
+  const totalCommissionDeduction = uniqueOwnedCampaignsForCommission.reduce(
+    (sum, c) => {
+      const rewardNum = parseRewardToNumber(c.reward);
+      if (rewardNum == null) return sum;
+      return sum + rewardNum * COMMISSION_RATE;
+    },
+    0
+  );
+
+  // Start from the brand's default budget and deduct 3% commission per listed campaign.
+  const brandNetTotal = Math.max(
+    0,
+    DEFAULT_BRAND_TOTAL - totalCommissionDeduction
+  );
+
   const fetchCampaigns = async () => {
     try {
       const res = await api.get("/api/campaigns");
@@ -127,11 +165,24 @@ const BrandDashboard = () => {
       {showConfetti && <Confetti />}
 
       <div className="dashboard">
-        <div className="dashboard-header">
-          <h2>🏢 Brand Dashboard</h2>
-          <b className="dashboard-subtitle">
-            Create campaigns and select winners
-          </b>
+        <div className="dashboard-header brand-header-row">
+          <div className="brand-header-left">
+            <h2>🏢 Brand Dashboard</h2>
+            <b className="dashboard-subtitle">
+              Create campaigns and select winners
+            </b>
+          </div>
+
+          {brandNetTotal != null && (
+            <span
+              className="navbar-total-won"
+              title="3% commission will be deducted from your brand budget based on listed campaign rewards."
+            >
+              Total to receive:{" "}
+              <strong>₹{brandNetTotal.toLocaleString("en-IN")}</strong>
+              <sup className="navbar-total-asterisk">*</sup>
+            </span>
+          )}
         </div>
 
         {!selectedCampaign && (
