@@ -191,6 +191,8 @@ const Login = () => {
         </div>
       </div>
 
+      <div className="auth-divider-line"></div>
+
       {/* Right panel: Login form */}
       <div className="auth-side-form">
         <canvas ref={canvasRef} className="auth-network-canvas" />

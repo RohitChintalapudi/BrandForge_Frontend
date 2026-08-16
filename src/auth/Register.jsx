@@ -286,6 +286,8 @@ const Register = () => {
         </div>
       </div>
 
+      <div className="auth-divider-line"></div>
+
       {/* Right panel: Brand Forge showcase with nice purple animations */}
       <div className="auth-side-showcase">
         <div className="auth-orb auth-orb-1"></div>
