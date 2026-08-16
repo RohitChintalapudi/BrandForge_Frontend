@@ -1627,9 +1627,9 @@ select:focus {
    BRAND PLATFORM STYLES
 ===================================================== */
 
-/* Brand Campaign Creation Card styling */
+/* Brand Campaign Creation Card styling (Full Width & Bold inputs) */
 .brand-create-card {
-  max-width: 680px !important;
+  max-width: 100% !important; /* Full width */
   margin: 0 auto 3.5rem !important;
   background: var(--white-0) !important;
   border-radius: var(--radius-lg) !important;
@@ -1639,6 +1639,11 @@ select:focus {
     0 12px 35px rgba(0, 0, 0, 0.02),
     0 4px 10px rgba(0, 0, 0, 0.01) !important;
   transition: all 0.3s ease !important;
+}
+
+.brand-create-card input,
+.brand-create-card textarea {
+  font-weight: 700 !important; /* Bold letters when writing */
 }
 
 .brand-create-card:hover {
