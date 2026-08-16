@@ -998,6 +998,260 @@ select:focus {
 }
 
 /* =====================================================
+   CREATOR DASHBOARD & LOGOUT MODAL STYLES
+===================================================== */
+
+/* Congrats card glowing purple dashed layout */
+.congrats-card {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(139, 92, 246, 0.03) 100%) !important;
+  border: 1.5px dashed rgba(124, 58, 237, 0.3) !important;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.congrats-card::before {
+  content: '🎉';
+  position: absolute;
+  right: 20px;
+  bottom: 10px;
+  font-size: 5rem;
+  opacity: 0.12;
+  transform: rotate(15deg);
+}
+
+.congo-title {
+  color: var(--purple-2) !important;
+  font-size: 1.5rem !important;
+  font-weight: 800;
+  margin: 0 0 0.25rem !important;
+}
+
+.congrats-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: block;
+}
+
+.congrats-subtitle {
+  margin: 0.5rem 0 0 !important;
+  color: var(--text-muted);
+}
+
+/* Win cards victory highlights */
+.creator-win-card {
+  border: 1.5px solid rgba(16, 185, 129, 0.35) !important;
+  background: linear-gradient(180deg, var(--white-0), rgba(16, 185, 129, 0.02)) !important;
+  position: relative;
+}
+
+.creator-win-card::before {
+  content: '🏆';
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  font-size: 2.2rem;
+  opacity: 0.12;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-header-row h3 {
+  margin: 0 !important;
+  font-size: 1.15rem !important;
+  font-weight: 750;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.card-reward-badge {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: var(--purple-2);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.card-deadline {
+  margin-top: 0.8rem !important;
+  font-size: 0.8rem !important;
+  color: var(--text-muted) !important;
+}
+
+.card-deadline strong {
+  color: var(--text-main);
+}
+
+.win-badge-gold {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: var(--white-0) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.2);
+}
+
+/* Styled buttons and links in Creator Dashboard */
+.creator-submit-btn {
+  padding: 0.55rem 1.15rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--purple-1), var(--purple-2));
+  color: var(--white-0);
+  transition: all 0.2s ease;
+}
+
+.creator-submit-btn:hover {
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.2);
+  transform: translateY(-1.5px);
+}
+
+.creator-view-submission-btn {
+  display: inline-block;
+  text-align: center;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--white-2);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  margin-top: 0.8rem;
+  text-decoration: none !important;
+}
+
+.creator-view-submission-btn:hover {
+  background: #e4e4e7;
+  transform: translateY(-1.5px);
+}
+
+.creator-view-details-btn {
+  background: transparent;
+  color: var(--purple-2);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.creator-view-details-btn:hover {
+  color: var(--purple-1);
+  text-decoration: underline;
+  transform: none;
+}
+
+/* Glowing warning confirmation modal for Logout */
+.logout-modal {
+  max-width: 380px !important;
+  text-align: center;
+  padding: 2.2rem 2rem !important;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  animation: authScaleFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.logout-modal-header {
+  margin-bottom: 0.8rem;
+}
+
+.logout-modal-header .warning-icon {
+  font-size: 2.2rem;
+  display: block;
+  margin-bottom: 0.4rem;
+  animation: pulseWarning 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.logout-modal h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.logout-modal p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 1.6rem;
+}
+
+.logout-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+}
+
+.logout-modal-actions button {
+  flex: 1;
+  padding: 0.65rem 1.2rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.logout-modal-actions .cancel-btn {
+  background: var(--white-2);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+}
+
+.logout-modal-actions .cancel-btn:hover {
+  background: #e4e4e7;
+  transform: translateY(-1.5px);
+}
+
+.logout-modal-actions .confirm-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: var(--white-0);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+}
+
+.logout-modal-actions .confirm-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.3);
+}
+
+/* Red logout button in Navbar styling */
+.navbar .action-btn.logout-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: var(--white-0) !important;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.15) !important;
+  padding: 0.52rem 1.35rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  border-radius: 999px !important;
+  transition: all 0.25s ease !important;
+}
+
+.navbar .action-btn.logout-btn:hover {
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* =====================================================
    RESPONSIVE
 ===================================================== */
 @media (max-width: 768px) {

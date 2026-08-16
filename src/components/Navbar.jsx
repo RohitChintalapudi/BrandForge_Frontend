@@ -48,7 +48,14 @@ const Navbar = () => {
   const isAuthPage =
     location.pathname === "/login" || location.pathname === "/register";
 
-  const handleLogout = async () => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setShowLogoutConfirm(false);
     await logout();
     toast.success("Logged out successfully");
     navigate("/login", { replace: true });
@@ -77,12 +84,40 @@ const Navbar = () => {
                 <sup className="navbar-total-asterisk">*</sup>
               </span>
             )}
-            <button className="action-btn" onClick={handleLogout}>
+            <button className="action-btn logout-btn" onClick={handleLogoutClick}>
               Logout
             </button>
           </>
         )}
       </div>
+
+      {showLogoutConfirm && (
+        <div className="modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
+          <div className="modal logout-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="logout-modal-header">
+              <span className="warning-icon">⚠️</span>
+              <h3>Confirm Logout</h3>
+            </div>
+            <p>Are you sure you want to log out of BrandForge?</p>
+            <div className="logout-modal-actions">
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="confirm-btn" 
+                onClick={handleConfirmLogout}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

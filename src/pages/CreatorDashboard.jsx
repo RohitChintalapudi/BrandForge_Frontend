@@ -120,8 +120,11 @@ const CreatorDashboard = () => {
 
             <div className="grid">
               {wins.map((w) => (
-                <div className="card" key={w._id}>
-                  <h3>{titleForWin(w, campaigns)}</h3>
+                <div className="card creator-win-card" key={w._id}>
+                  <div className="card-header-row">
+                    <h3>{titleForWin(w, campaigns)}</h3>
+                    <span className="badge win-badge-gold">Winner</span>
+                  </div>
                   <p className="card-description">🎉 You won this campaign.</p>
                   {prizeForWin(w, campaigns) ? (
                     <p className="prize-won-line card-prize">
@@ -131,13 +134,11 @@ const CreatorDashboard = () => {
                     </p>
                   ) : null}
 
-                  <span className="badge">Winner</span>
-
                   <a
                     href={w.contentUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="content-link submit-link"
+                    className="creator-view-submission-btn"
                   >
                     View Submission
                   </a>
@@ -164,18 +165,27 @@ const CreatorDashboard = () => {
 
                 return (
                   <div className="card" key={c._id}>
-                    <h3>{c.title || "Untitled Campaign"}</h3>
+                    <div className="card-header-row">
+                      <h3>{c.title || "Untitled Campaign"}</h3>
+                      {c.reward && <span className="card-reward-badge">{c.reward}</span>}
+                    </div>
                     <p className="card-description">
                       {shortDescription(c.description)}
                     </p>
 
-                    <div style={{ marginTop: "0.6rem", display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                    {c.deadline && (
+                      <p className="card-deadline">
+                        📅 Deadline: <strong>{formatDeadline(c.deadline)}</strong>
+                      </p>
+                    )}
+
+                    <div style={{ marginTop: "0.9rem", display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap" }}>
                       {submitted ? (
                         <span className="badge">Submitted</span>
                       ) : (
                         <button
                           type="button"
-                          className="submitContent"
+                          className="creator-submit-btn"
                           onClick={() => setSelectedCampaign(c)}
                         >
                           Submit Content
@@ -183,12 +193,7 @@ const CreatorDashboard = () => {
                       )}
                       <button
                         type="button"
-                        className="action-btn"
-                        style={{
-                          background: "transparent",
-                          color: "var(--purple-2)",
-                          paddingInline: 0,
-                        }}
+                        className="creator-view-details-btn"
                         onClick={() => setViewCampaign(c)}
                       >
                         View details
