@@ -1200,7 +1200,7 @@ select:focus {
 }
 
 .logout-modal p {
-  color: var(--text-muted);
+  color: #000000 !important; /* Explicit black color */
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0.5rem 0 1.6rem;
