@@ -12,6 +12,77 @@ const BrandDashboard = () => {
     reward: "",
     deadline: "",
   });
+  const [formErrors, setFormErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  const getTomorrowDateString = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  };
+
+  const validateField = (name, value) => {
+    let error = "";
+    if (name === "title") {
+      if (!value.trim()) {
+        error = "Campaign title is required";
+      } else if (value.trim().length < 5) {
+        error = "Title must be at least 5 characters";
+      } else if (value.trim().length > 50) {
+        error = "Title cannot exceed 50 characters";
+      }
+    } else if (name === "description") {
+      if (!value.trim()) {
+        error = "Description is required";
+      } else if (value.trim().length < 20) {
+        error = "Description must be at least 20 characters";
+      } else if (value.trim().length > 800) {
+        error = "Description cannot exceed 800 characters";
+      }
+    } else if (name === "reward") {
+      const parsed = parseFloat(value.replace(/[^\d.]/g, ""));
+      if (!value.trim()) {
+        error = "Reward is required";
+      } else if (isNaN(parsed) || parsed <= 0) {
+        error = "Reward must be a positive number";
+      } else if (parsed < 500) {
+        error = "Minimum campaign reward is ₹500";
+      }
+    } else if (name === "deadline") {
+      if (!value) {
+        error = "Deadline is required";
+      } else {
+        const selectedDate = new Date(value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate <= today) {
+          error = "Deadline must tomorrow or later";
+        }
+      }
+    }
+    return error;
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const error = validateField(name, value);
+    setFormErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
+  const handleChange = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (touched[name]) {
+      const error = validateField(name, value);
+      setFormErrors((prev) => ({ ...prev, [name]: error }));
+    }
+  };
+
+  const isFormInvalid = () => {
+    const hasErrors = Object.values(formErrors).some((err) => !!err);
+    const allFilled = form.title && form.description && form.reward && form.deadline;
+    return hasErrors || !allFilled;
+  };
 
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
@@ -105,10 +176,28 @@ const BrandDashboard = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    const errorsList = {};
+    Object.keys(form).forEach((key) => {
+      const err = validateField(key, form[key]);
+      if (err) errorsList[key] = err;
+    });
+
+    if (Object.keys(errorsList).length > 0) {
+      setFormErrors(errorsList);
+      const touchedAll = {};
+      Object.keys(form).forEach((k) => { touchedAll[k] = true; });
+      setTouched(touchedAll);
+      toast.error("Please resolve the errors on the form");
+      return;
+    }
+
     try {
       await api.post("/api/campaigns", form);
       toast.success("Campaign created (pending admin approval)");
       setForm({ title: "", description: "", reward: "", deadline: "" });
+      setFormErrors({});
+      setTouched({});
       fetchCampaigns();
     } catch {
       toast.error("Failed to create campaign");
@@ -195,47 +284,76 @@ const BrandDashboard = () => {
               <h3>Create New Campaign</h3>
 
               <form onSubmit={handleCreate} className="forms">
-                <input
-                  placeholder="Campaign Title (e.g. Summer Launch Campaign)"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
-                />
-
-                <textarea
-                  placeholder="Campaign Description & brief requirements..."
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
-                  }
-                  required
-                />
-
-                <div className="brand-form-row">
+                <div className="form-group-validation">
                   <input
-                    placeholder="Reward (e.g. ₹5000)"
-                    value={form.reward}
-                    onChange={(e) => setForm({ ...form, reward: e.target.value })}
+                    type="text"
+                    name="title"
+                    placeholder="Campaign Title (e.g. Summer Launch Campaign)"
+                    value={form.title}
+                    onChange={(e) => handleChange("title", e.target.value)}
+                    onBlur={handleBlur}
+                    className={touched.title ? (formErrors.title ? "is-invalid" : "is-valid") : ""}
                     required
                   />
-
-                  <input
-                    type="date"
-                    value={form.deadline}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        deadline: e.target.value,
-                      })
-                    }
-                    required
-                  />
+                  {touched.title && formErrors.title && (
+                    <span className="validation-error-tag">{formErrors.title}</span>
+                  )}
                 </div>
 
-                <button className="brand-submit-btn">
+                <div className="form-group-validation">
+                  <textarea
+                    name="description"
+                    placeholder="Campaign Description & brief requirements..."
+                    value={form.description}
+                    onChange={(e) => handleChange("description", e.target.value)}
+                    onBlur={handleBlur}
+                    className={touched.description ? (formErrors.description ? "is-invalid" : "is-valid") : ""}
+                    required
+                  />
+                  {touched.description && formErrors.description && (
+                    <span className="validation-error-tag">{formErrors.description}</span>
+                  )}
+                </div>
+
+                <div className="brand-form-row">
+                  <div className="form-group-validation">
+                    <input
+                      type="text"
+                      name="reward"
+                      placeholder="Reward (e.g. ₹5000)"
+                      value={form.reward}
+                      onChange={(e) => handleChange("reward", e.target.value)}
+                      onBlur={handleBlur}
+                      className={touched.reward ? (formErrors.reward ? "is-invalid" : "is-valid") : ""}
+                      required
+                    />
+                    {touched.reward && formErrors.reward && (
+                      <span className="validation-error-tag">{formErrors.reward}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group-validation">
+                    <input
+                      type="date"
+                      name="deadline"
+                      min={getTomorrowDateString()}
+                      value={form.deadline}
+                      onChange={(e) => handleChange("deadline", e.target.value)}
+                      onBlur={handleBlur}
+                      className={touched.deadline ? (formErrors.deadline ? "is-invalid" : "is-valid") : ""}
+                      required
+                    />
+                    {touched.deadline && formErrors.deadline && (
+                      <span className="validation-error-tag">{formErrors.deadline}</span>
+                    )}
+                  </div>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="brand-submit-btn"
+                  disabled={isFormInvalid()}
+                >
                   Launch Campaign (3% platform fee applied)
                 </button>
               </form>

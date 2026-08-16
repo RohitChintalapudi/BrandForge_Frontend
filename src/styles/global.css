@@ -1920,3 +1920,38 @@ body::-webkit-scrollbar,
 .auth-split-layout::-webkit-scrollbar {
   display: none !important; /* Chrome, Safari, Opera */
 }
+
+/* =====================================================
+   REAL-TIME FORM INPUT VALIDATION
+===================================================== */
+.form-group-validation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.1rem;
+  width: 100%;
+}
+
+.validation-error-tag {
+  color: #ef4444 !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  margin-left: 0.25rem;
+  display: block;
+}
+
+.is-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.is-valid {
+  border-color: #10b981 !important;
+}
+
+.brand-submit-btn:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
