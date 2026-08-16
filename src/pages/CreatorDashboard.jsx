@@ -281,7 +281,7 @@ const CreatorDashboard = () => {
           onClick={() => setViewCampaign(null)}
         >
           <div
-            className="modal"
+            className="modal campaign-details-modal"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -291,24 +291,67 @@ const CreatorDashboard = () => {
               ✕
             </button>
 
-            <h3>{viewCampaign.title || "Untitled Campaign"}</h3>
-            <p style={{ marginTop: "0.8rem" }}>
-              {viewCampaign.description || "No description available"}
-            </p>
-            {viewCampaign.reward && (
-              <p style={{ marginTop: "1rem", fontWeight: 600 }}>
-                Reward:{" "}
-                <span style={{ fontWeight: 700 }}>{viewCampaign.reward}</span>
-              </p>
-            )}
-            {viewCampaign.deadline && (
-              <p style={{ marginTop: "0.6rem", fontSize: "0.9rem" }}>
-                Deadline:{" "}
-                <span style={{ fontWeight: 500 }}>
-                  {formatDeadline(viewCampaign.deadline)}
-                </span>
-              </p>
-            )}
+            <div className="campaign-details-header">
+              <span className="details-header-icon">📢</span>
+              <h3>{viewCampaign.title || "Untitled Campaign"}</h3>
+            </div>
+
+            <div className="campaign-details-content">
+              <div className="details-section">
+                <h4>Campaign Brief</h4>
+                <p>{viewCampaign.description || "No description available"}</p>
+              </div>
+
+              <div className="details-grid-specs">
+                <div className="spec-item">
+                  <span className="spec-icon">💰</span>
+                  <div className="spec-info">
+                    <span className="spec-label">Reward Amount</span>
+                    <span className="spec-value">{viewCampaign.reward || "Not specified"}</span>
+                  </div>
+                </div>
+
+                <div className="spec-item">
+                  <span className="spec-icon">📅</span>
+                  <div className="spec-info">
+                    <span className="spec-label">Submission Deadline</span>
+                    <span className="spec-value">{formatDeadline(viewCampaign.deadline)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="details-requirements">
+                <h4>Submission Guidelines</h4>
+                <ul>
+                  <li>Video quality should be at least 1080p (Full HD).</li>
+                  <li>Keep video clear, stable, and well-lit (no blurry footage).</li>
+                  <li>Audio must be understandable with minimal background noise.</li>
+                  <li>Your content should match the brief and brand tone.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="campaign-details-actions">
+              <button 
+                type="button" 
+                className="close-modal-btn" 
+                onClick={() => setViewCampaign(null)}
+              >
+                Close Brief
+              </button>
+              {!hasSubmitted(viewCampaign._id) && (
+                <button 
+                  type="button" 
+                  className="submit-content-btn-primary" 
+                  onClick={() => {
+                    setViewCampaign(null);
+                    setSelectedCampaign(viewCampaign);
+                  }}
+                >
+                  Submit Content Now
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
