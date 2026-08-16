@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../api/axios";
+import ServerLoadingScreen from "./ServerLoadingScreen";
 
 const ProtectedRoute = ({ children, role }) => {
   const [status, setStatus] = useState("loading");
@@ -15,7 +16,7 @@ const ProtectedRoute = ({ children, role }) => {
       .catch(() => setStatus("denied"));
   }, [role]);
 
-  if (status === "loading") return null;
+  if (status === "loading") return <ServerLoadingScreen />;
   if (status === "denied") return <Navigate to="/login" />;
 
   return children;

@@ -1926,6 +1926,180 @@ select:focus {
 }
 
 /* =====================================================
+   SERVER LOADING SCREEN
+   Shown while the free-tier Render backend cold-starts.
+===================================================== */
+.server-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(1100px 650px at 18% 8%, rgba(124, 58, 237, 0.22), transparent 60%),
+    radial-gradient(900px 600px at 85% 90%, rgba(168, 85, 247, 0.18), transparent 60%),
+    linear-gradient(-45deg, #0a071b, #151033, #0a071b, #12091f);
+  background-size: 400% 400%;
+  animation: authGradient 10s ease infinite;
+  overflow: hidden;
+}
+
+.server-loading-screen::before,
+.server-loading-grid {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 36px 36px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 15%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, black 15%, transparent 72%);
+  pointer-events: none;
+}
+
+/* Floating ambient orbs */
+.server-loading-orbs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.server-loading-orbs .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: serverFloat 12s ease-in-out infinite;
+}
+
+@keyframes serverFloat {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -25px) scale(1.08);
+  }
+}
+
+.server-loading-orbs .orb-1 {
+  width: 340px;
+  height: 340px;
+  top: -80px;
+  left: -80px;
+  background: rgba(124, 58, 237, 0.35);
+  animation-duration: 14s;
+}
+
+.server-loading-orbs .orb-2 {
+  width: 260px;
+  height: 260px;
+  bottom: -60px;
+  right: -60px;
+  background: rgba(168, 85, 247, 0.3);
+  animation-delay: -4s;
+  animation-duration: 16s;
+}
+
+.server-loading-orbs .orb-3 {
+  width: 200px;
+  height: 200px;
+  top: 55%;
+  left: 70%;
+  background: rgba(139, 92, 246, 0.28);
+  animation-delay: -8s;
+  animation-duration: 18s;
+}
+
+.server-loading-card {
+  position: relative;
+  z-index: 3;
+  max-width: 460px;
+  width: calc(100% - 3rem);
+  text-align: center;
+  padding: 3rem 2.4rem;
+  border-radius: var(--radius-lg);
+  background: rgba(12, 8, 28, 0.55);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  animation: authScaleFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.server-loading-logo {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 1.6rem;
+}
+
+.server-loading-logo span {
+  color: #a855f7;
+}
+
+.server-loading-spinner {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto 1.8rem;
+  border-radius: 50%;
+  border: 4px solid rgba(168, 85, 247, 0.15);
+  border-top-color: #a855f7;
+  border-right-color: #7c3aed;
+  animation: serverSpin 0.9s linear infinite;
+}
+
+@keyframes serverSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.server-loading-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.8rem;
+  letter-spacing: -0.02em;
+}
+
+.server-loading-subtitle {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: #e9d5ff;
+  opacity: 0.9;
+  margin: 0 0 1.6rem;
+}
+
+.server-loading-step {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  animation: serverStepIn 0.45s ease both;
+}
+
+@keyframes serverStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
    RESPONSIVE
 ===================================================== */
 @media (max-width: 768px) {

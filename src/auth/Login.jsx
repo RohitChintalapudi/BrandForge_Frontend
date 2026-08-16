@@ -3,6 +3,7 @@ import api from "../api/axios";
 import { useNavigate, Link, useNavigationType } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
+import ServerLoadingScreen from "../components/ServerLoadingScreen";
 
 const Login = () => {
   const canvasRef = useRef(null);
@@ -89,6 +90,7 @@ const Login = () => {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
   const { user, setUser } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (user && navigationType === "POP") {
@@ -149,6 +151,7 @@ const Login = () => {
     }
 
     try {
+      setSubmitting(true);
       await api.post("/api/auth/login", { email, password });
       const me = await api.get("/api/auth/me");
 
@@ -161,13 +164,17 @@ const Login = () => {
       if (me.data.role === "creator") navigate("/creator", { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const hasErrors = !!(emailTouched && emailError) || !!(passwordTouched && passwordError);
 
   return (
-    <div className="auth-split-layout">
+    <>
+      {submitting && <ServerLoadingScreen />}
+      <div className="auth-split-layout">
       {/* Left panel: Brand Forge showcase with nice purple animations */}
       <div className="auth-side-showcase">
         <div className="auth-orb auth-orb-1"></div>
@@ -247,7 +254,8 @@ const Login = () => {
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

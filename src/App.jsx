@@ -6,6 +6,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import BrandDashboard from "./pages/BrandDashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ServerLoadingScreen from "./components/ServerLoadingScreen";
 import { useAuth } from "./context/AuthContext";
 
 const HomeRedirect = () => {
@@ -19,6 +20,10 @@ const HomeRedirect = () => {
 };
 
 const App = () => {
+  const { loading } = useAuth();
+
+  if (loading) return <ServerLoadingScreen />;
+
   return (
     <>
       <Navbar />

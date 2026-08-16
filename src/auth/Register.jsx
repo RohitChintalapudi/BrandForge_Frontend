@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import api from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import ServerLoadingScreen from "../components/ServerLoadingScreen";
 
 const Register = () => {
   const canvasRef = useRef(null);
@@ -97,6 +98,7 @@ const Register = () => {
   });
 
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
   const validateField = (name, val) => {
     switch (name) {
@@ -186,11 +188,14 @@ const Register = () => {
     }
 
     try {
+      setSubmitting(true);
       await api.post("/api/auth/register", form);
       toast.success("Registered successfully");
       navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -199,7 +204,9 @@ const Register = () => {
                     !!(touched.password && errors.password);
 
   return (
-    <div className="auth-split-layout">
+    <>
+      {submitting && <ServerLoadingScreen />}
+      <div className="auth-split-layout">
       {/* Left panel: Form */}
       <div className="auth-side-form">
         <canvas ref={canvasRef} className="auth-network-canvas" />
@@ -311,6 +318,7 @@ const Register = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
