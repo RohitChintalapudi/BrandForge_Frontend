@@ -165,41 +165,45 @@ const BrandDashboard = () => {
       {showConfetti && <Confetti />}
 
       <div className="dashboard">
-        <div className="dashboard-header brand-header-row">
-          <div className="brand-header-left">
+        {/* HERO BANNER */}
+        <div className="dashboard-hero">
+          <div className="hero-text-col">
             <h2>🏢 Brand Dashboard</h2>
-            <b className="dashboard-subtitle">
-              Create campaigns and select winners
-            </b>
+            <p className="dashboard-subtitle">
+              Establish campaigns, discover creative talent, and select winning content partnerships.
+            </p>
           </div>
-
           {brandNetTotal != null && (
-            <span
-              className="navbar-total-won"
-              title="3% commission will be deducted from your brand budget based on listed campaign rewards."
-            >
-              Total to receive:{" "}
-              <strong>₹{brandNetTotal.toLocaleString("en-IN")}</strong>
-              <sup className="navbar-total-asterisk">*</sup>
-            </span>
+            <div className="hero-stats-grid">
+              <div className="stat-card" title="3% commission will be deducted from your brand budget based on listed campaign rewards.">
+                <h4>Remaining Budget</h4>
+                <span className="stat-val">₹{brandNetTotal.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="stat-card">
+                <h4>Your Campaigns</h4>
+                <span className="stat-val">
+                  {campaigns.filter((c) => c && c._id && isCampaignOwnedByCurrentBrand(c)).length}
+                </span>
+              </div>
+            </div>
           )}
         </div>
 
         {!selectedCampaign && (
           <>
-            <div className="card premium-card create-card">
-              <h3>Create Campaign</h3>
+            <div className="card brand-create-card">
+              <h3>Create New Campaign</h3>
 
               <form onSubmit={handleCreate} className="forms">
                 <input
-                  placeholder="Campaign Title"
+                  placeholder="Campaign Title (e.g. Summer Launch Campaign)"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
                 />
 
                 <textarea
-                  placeholder="Campaign Description"
+                  placeholder="Campaign Description & brief requirements..."
                   value={form.description}
                   onChange={(e) =>
                     setForm({
@@ -210,59 +214,79 @@ const BrandDashboard = () => {
                   required
                 />
 
-                <input
-                  placeholder="Reward (e.g ₹5000)"
-                  value={form.reward}
-                  onChange={(e) => setForm({ ...form, reward: e.target.value })}
-                  required
-                />
+                <div className="brand-form-row">
+                  <input
+                    placeholder="Reward (e.g. ₹5000)"
+                    value={form.reward}
+                    onChange={(e) => setForm({ ...form, reward: e.target.value })}
+                    required
+                  />
 
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      deadline: e.target.value,
-                    })
-                  }
-                  required
-                />
+                  <input
+                    type="date"
+                    value={form.deadline}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        deadline: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
 
-                <button className="action-btn premium-btn">
-                  Create Campaign (3% of reward will be deducted as platform fee)
+                <button className="brand-submit-btn">
+                  Launch Campaign (3% platform fee applied)
                 </button>
               </form>
             </div>
-              <h3>Campaigns created by you</h3>
-            <div className="grid" style={{ marginTop: "2rem" }}>
+
+            <h3 className="section-title">Campaigns created by you</h3>
+            <div className="grid" style={{ marginTop: "1.5rem" }}>
               {campaigns
                 .filter(
                   (c) => c && c._id && isCampaignOwnedByCurrentBrand(c)
                 )
                 .map((c) => (
-                  <div className="card premium-card" key={c._id}>
-                    <div className="card-header">
-                      <h3>{c.title || "Untitled Campaign"}</h3>
+                  <div className="card creator-campaign-card" key={c._id}>
+                    <div className="campaign-card-header">
+                      <h3 className="campaign-card-title">{c.title || "Untitled Campaign"}</h3>
                       {c.status && (
-                        <span className={`badge ${c.status}`}>
+                        <span className={c.status === "approved" ? "status-badge-approved" : "status-badge-pending"}>
                           {c.status === "pending" && "Pending Approval"}
                           {c.status === "approved" && "Approved"}
                         </span>
                       )}
                     </div>
 
-                    <p className="card-description">
-                      {shortDescription(c.description)}
+                    <p className="campaign-card-desc">
+                      {shortDescription(c.description, 110)}
                     </p>
 
-                    <button
-                      className="action-btn premium-btn"
-                      style={{ marginTop: "0.8rem" }}
-                      onClick={() => openSubmissions(c)}
-                    >
-                      View Submissions
-                    </button>
+                    <div className="campaign-card-meta">
+                      {c.reward && (
+                        <div className="campaign-meta-item">
+                          <span>💰</span>
+                          <span>Reward: <strong>{c.reward}</strong></span>
+                        </div>
+                      )}
+                      {c.deadline && (
+                        <div className="campaign-meta-item">
+                          <span>📅</span>
+                          <span>Deadline: <strong>{new Date(c.deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="campaign-card-actions">
+                      <button
+                        className="campaign-submit-btn"
+                        style={{ width: "100%" }}
+                        onClick={() => openSubmissions(c)}
+                      >
+                        View Submissions
+                      </button>
+                    </div>
                   </div>
                 ))}
             </div>
@@ -272,72 +296,71 @@ const BrandDashboard = () => {
         {selectedCampaign && (
           <>
             <button
-              className="action-btn premium-btn back-btn"
+              className="campaign-details-btn"
+              style={{ marginBottom: "1.8rem", fontSize: "0.95rem" }}
               onClick={() => {
                 setSelectedCampaign(null);
                 setShowWinner(false);
                 setShowConfetti(false);
               }}
             >
-              ← Back
+              ← Back to Campaign Creator
             </button>
 
-            <h3 className="section-title">Submissions</h3>
+            <h3 className="section-title" style={{ marginBottom: "1.5rem" }}>
+              Submissions for: <strong style={{ color: "var(--purple-2)" }}>{selectedCampaign.title}</strong>
+            </h3>
 
             {winner && !showWinner && (
               <button
-                className="action-btn premium-btn"
-                style={{ marginBottom: "1.5rem" }}
+                className="campaign-submit-btn"
+                style={{ marginBottom: "2rem", display: "inline-block", background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
                 onClick={viewWinner}
               >
-                View Winner 🎉
+                View Selected Winner 🎉
               </button>
             )}
 
             {winner && showWinner && (
-              <div
-                className="card premium-card winner-card"
-                style={{ marginBottom: "2rem" }}
-              >
-                <h3>🏆 Winner Selected</h3>
-                <p>
-                  <strong>{winner.creator?.name}</strong>
-                </p>
-
-                <a
-                  href={winner.contentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="content-link"
-                >
-                  View Winning Content
-                </a>
+              <div className="brand-winner-banner">
+                <div className="brand-winner-content">
+                  <h3 className="brand-winner-title">🏆 Campaign Winner Crowned!</h3>
+                  <b className="brand-winner-creator">Creator: {winner.creator?.name || "Unknown Creator"}</b>
+                  <a
+                    href={winner.contentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="brand-winner-link"
+                  >
+                    View Winning Content Submission →
+                  </a>
+                </div>
               </div>
             )}
 
             <div className="grid">
               {submissions.map((s) => (
-                <div className="card premium-card submission-card" key={s._id}>
+                <div className="brand-submission-card" key={s._id}>
                   <div className="submission-top">
                     <div className="submission-creator">
-                      <div className="submission-avatar">
+                      <div className="avatar-initial">
                         {(s.creator?.name || "C").slice(0, 1).toUpperCase()}
                       </div>
                       <div className="submission-creator-meta">
-                        <div className="submission-creator-label">Creator</div>
-                        <div className="submission-creator-name">
+                        <span className="submission-creator-label">Creator</span>
+                        <span className="submission-creator-name">
                           {s.creator?.name || "Unknown"}
-                        </div>
+                        </span>
                       </div>
                     </div>
 
                     {s.status === "winner" ? (
-                      <span className="submission-status submission-status--winner">
+                      <span className="winner-badge">
                         🏆 Winner
                       </span>
                     ) : (
-                      <span className="submission-status submission-status--new">
-                        New
+                      <span className="status-badge-pending" style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem" }}>
+                        Reviewing
                       </span>
                     )}
                   </div>
@@ -347,15 +370,15 @@ const BrandDashboard = () => {
                       href={s.contentUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="submission-link"
+                      className="submission-view-link"
                     >
-                      View Content
+                      View Submission →
                     </a>
 
                     {s.status !== "winner" && (
                       <button
                         type="button"
-                        className="submission-btn"
+                        className="select-winner-btn"
                         onClick={() => selectWinner(s._id)}
                       >
                         Select Winner
