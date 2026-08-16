@@ -13,6 +13,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [creatorTotalWon, setCreatorTotalWon] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     if (user?.role !== "creator") {
@@ -32,6 +33,7 @@ const Navbar = () => {
           winsRes.data || [],
           campaignsRes.data || []
         );
+        if (cancelled) return;
         setCreatorTotalWon(summary);
       } catch {
         if (!cancelled) setCreatorTotalWon(null);
@@ -47,8 +49,6 @@ const Navbar = () => {
 
   const isAuthPage =
     location.pathname === "/login" || location.pathname === "/register";
-
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
