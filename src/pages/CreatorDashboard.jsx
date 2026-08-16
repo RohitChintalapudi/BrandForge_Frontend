@@ -178,28 +178,35 @@ const CreatorDashboard = () => {
                 const submitted = hasSubmitted(c._id);
 
                 return (
-                  <div className="card" key={c._id}>
-                    <div className="card-header-row">
-                      <h3>{c.title || "Untitled Campaign"}</h3>
-                      {c.reward && <span className="card-reward-badge">{c.reward}</span>}
+                  <div className="card creator-campaign-card" key={c._id}>
+                    <div className="campaign-card-header">
+                      <h3 className="campaign-card-title">{c.title || "Untitled Campaign"}</h3>
+                      {c.reward && <span className="campaign-card-reward">{c.reward}</span>}
                     </div>
-                    <p className="card-description">
-                      {shortDescription(c.description)}
+                    <p className="campaign-card-desc">
+                      {shortDescription(c.description, 110)}
                     </p>
 
-                    {c.deadline && (
-                      <p className="card-deadline">
-                        📅 Deadline: <strong>{formatDeadline(c.deadline)}</strong>
-                      </p>
-                    )}
+                    <div className="campaign-card-meta">
+                      {c.deadline && (
+                        <div className="campaign-meta-item">
+                          <span>📅</span>
+                          <span>Deadline: <strong>{formatDeadline(c.deadline)}</strong></span>
+                        </div>
+                      )}
+                      <div className="campaign-meta-item">
+                        <span>⚡</span>
+                        <span>Status: <strong>{submitted ? "Submitted" : "Open for Content"}</strong></span>
+                      </div>
+                    </div>
 
-                    <div style={{ marginTop: "0.9rem", display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap" }}>
+                    <div className="campaign-card-actions">
                       {submitted ? (
                         <span className="badge">Submitted</span>
                       ) : (
                         <button
                           type="button"
-                          className="creator-submit-btn"
+                          className="campaign-submit-btn"
                           onClick={() => setSelectedCampaign(c)}
                         >
                           Submit Content
@@ -207,10 +214,10 @@ const CreatorDashboard = () => {
                       )}
                       <button
                         type="button"
-                        className="creator-view-details-btn"
+                        className="campaign-details-btn"
                         onClick={() => setViewCampaign(c)}
                       >
-                        View details
+                        View details →
                       </button>
                     </div>
                   </div>
