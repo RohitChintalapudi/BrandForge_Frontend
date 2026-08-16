@@ -703,32 +703,119 @@ select:focus {
   margin: 0 auto;
 }
 
-.dashboard-header {
-  margin-bottom: 2.4rem;
-}
-
-.brand-header-row {
+/* BrandForge Premium Dashboard Hero Banner */
+.dashboard-hero {
+  background: linear-gradient(135deg, var(--purple-1), var(--purple-2), #8b5cf6);
+  border-radius: var(--radius-lg);
+  padding: 2.2rem 2.8rem;
+  margin-bottom: 2.8rem;
+  color: var(--white-0);
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 1.2rem;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 12px 30px rgba(124, 58, 237, 0.15),
+    0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-.brand-header-left {
-  min-width: 0;
+/* Subtle background glowing orb in hero */
+.dashboard-hero::after {
+  content: '';
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  background: rgba(255, 255, 255, 0.08);
+  filter: blur(40px);
+  border-radius: 50%;
+  right: -50px;
+  top: -50px;
+  pointer-events: none;
 }
 
-.dashboard-header h2 {
+.hero-text-col {
+  z-index: 2;
+}
+
+.dashboard-hero h2 {
   margin: 0 0 0.35rem;
-  font-size: 2rem;
-  color: var(--purple-2);
+  font-size: 2.1rem;
+  font-weight: 850;
+  color: var(--white-0) !important;
+  letter-spacing: -0.02em;
 }
 
-.dashboard-subtitle {
-  font-size: 1rem;
-  margin-left: 20px;
-  color: var(--text-muted);
-  max-width: 520px;
+.dashboard-hero .dashboard-subtitle {
+  font-size: 1.05rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+
+.hero-stats-grid {
+  display: flex;
+  gap: 1.2rem;
+  z-index: 2;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0.85rem 1.6rem;
+  border-radius: var(--radius-md);
+  min-width: 120px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.stat-card h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-card .stat-val {
+  font-size: 1.8rem;
+  font-weight: 850;
+  color: var(--white-0);
+  line-height: 1.2;
+}
+
+/* Responsive stacks for mobile view */
+@media (max-width: 768px) {
+  .dashboard-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2rem;
+    gap: 1.5rem;
+  }
+
+  .hero-stats-grid {
+    width: 100%;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: calc(50% - 0.6rem);
+  }
 }
 
 .prize-summary {

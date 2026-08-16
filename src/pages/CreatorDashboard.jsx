@@ -88,12 +88,26 @@ const CreatorDashboard = () => {
   return (
     <div className="dashboard-wrapper">
       <div className="dashboard">
-        {/* HEADER */}
-        <div className="dashboard-header">
-          <h2>🎨 Creator Dashboard</h2>
-          <b className="dashboard-subtitle">
-            Discover campaigns and showcase your creativity
-          </b>
+        {/* HERO BANNER */}
+        <div className="dashboard-hero">
+          <div className="hero-text-col">
+            <h2>🎨 Creator Dashboard</h2>
+            <p className="dashboard-subtitle">
+              Discover campaigns, showcase your creativity, and forge spectacular partnerships.
+            </p>
+          </div>
+          <div className="hero-stats-grid">
+            <div className="stat-card">
+              <h4>Total Wins</h4>
+              <span className="stat-val">{wins.length}</span>
+            </div>
+            <div className="stat-card">
+              <h4>Open Campaigns</h4>
+              <span className="stat-val">
+                {campaigns.filter((c) => c && c._id).length}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* 🎉 CONGRATULATIONS CARD */}
