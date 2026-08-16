@@ -980,11 +980,17 @@ select:focus {
 ===================================================== */
 .modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(17, 24, 39, 0.4);
-  display: grid;
-  place-items: center;
-  z-index: 50;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 10, 30, 0.55) !important; /* Darker purple backdrop */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 999999 !important; /* Stand above everything */
 }
 
 .modal {
@@ -1157,11 +1163,15 @@ select:focus {
 
 /* Glowing warning confirmation modal for Logout */
 .logout-modal {
-  max-width: 380px !important;
+  max-width: 390px !important;
   text-align: center;
-  padding: 2.2rem 2rem !important;
+  padding: 2.5rem 2.2rem !important;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  border: 2px solid var(--purple-2) !important; /* Thick Purple Outline */
+  box-shadow: 
+    0 20px 50px rgba(124, 58, 237, 0.25), /* ambient purple glow */
+    0 10px 20px rgba(0, 0, 0, 0.1) !important;
+  background: var(--white-0) !important;
   animation: authScaleFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -1266,4 +1276,22 @@ select:focus {
   .auth-form {
     padding: 2rem 1.5rem;
   }
+}
+
+/* =====================================================
+   SCROLLBAR CUSTOMIZATION (HIDDEN YET FUNCTIONAL)
+===================================================== */
+html,
+body,
+.dashboard-wrapper,
+.auth-split-layout {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.dashboard-wrapper::-webkit-scrollbar,
+.auth-split-layout::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
 }

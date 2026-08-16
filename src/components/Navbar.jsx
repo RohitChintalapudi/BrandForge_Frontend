@@ -95,24 +95,24 @@ const Navbar = () => {
         <div className="modal-overlay" onClick={() => setShowLogoutConfirm(false)}>
           <div className="modal logout-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
-              <span className="warning-icon">⚠️</span>
-              <h3>Confirm Logout</h3>
+              <span className="warning-icon">👋</span>
+              <h3>Leaving BrandForge?</h3>
             </div>
-            <p>Are you sure you want to log out of BrandForge?</p>
+            <p>Are you sure you want to sign out? We'll save your progress, campaigns, and earnings so you can jump right back in anytime!</p>
             <div className="logout-modal-actions">
               <button 
                 type="button" 
                 className="cancel-btn" 
                 onClick={() => setShowLogoutConfirm(false)}
               >
-                Cancel
+                Stay Logged In
               </button>
               <button 
                 type="button" 
                 className="confirm-btn" 
                 onClick={handleConfirmLogout}
               >
-                Log Out
+                Sign Out
               </button>
             </div>
           </div>
