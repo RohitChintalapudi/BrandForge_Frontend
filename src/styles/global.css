@@ -18,12 +18,29 @@
 }
 
 /* =====================================================
-   RESET & BASE
+   RESET & BASE (SCROLLBAR HIDDEN, SCROLL FUNCTIONALITY INTACT)
 ===================================================== */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+/* Globally hide all scrollbars across WebKit browsers */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 body {
@@ -33,6 +50,10 @@ body {
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 a {
@@ -254,18 +275,19 @@ textarea {
 ===================================================== */
 .login-page-wrapper {
   position: relative;
-  height: calc(100vh - 54px);
-  max-height: calc(100vh - 54px);
+  min-height: calc(100vh - 54px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem 1.5rem;
+  padding: 1.5rem;
   background: #f8fafc;
-  overflow: hidden !important;
+  overflow-y: auto;
   box-sizing: border-box;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-/* Force disable scrollbars across all auth containers */
+/* Hide scrollbars across all auth containers while preserving scroll functionality */
 .login-page-wrapper,
 .login-card-container,
 .register-container,
@@ -276,7 +298,6 @@ textarea {
 .interactive-form {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
-  overflow: hidden !important;
 }
 
 .login-page-wrapper::-webkit-scrollbar,
@@ -1393,19 +1414,20 @@ textarea {
 }
 
 /* =====================================================
-   SCROLLBAR (WEBKIT)
+   SCROLLBAR (GLOBALLY HIDDEN - FULL SCROLL FUNCTIONALITY INTACT)
 ===================================================== */
 ::-webkit-scrollbar {
-  width: 8px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--purple);
-  border-radius: 6px;
+  background: transparent !important;
 }
 
 /* =====================================================
