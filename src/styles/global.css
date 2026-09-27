@@ -250,7 +250,7 @@ textarea {
 }
 
 /* =====================================================
-   MODERN LOGIN & AUTH PAGES (COMPACT ZERO-SCROLL REDESIGN)
+   MODERN LOGIN & AUTH PAGES (EXPANDED ZERO-SCROLL REDESIGN)
 ===================================================== */
 .login-page-wrapper {
   position: relative;
@@ -259,37 +259,63 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.25rem;
+  padding: 1rem 1.5rem;
   background: #f8fafc;
-  overflow: hidden;
+  overflow: hidden !important;
   box-sizing: border-box;
+}
+
+/* Force disable scrollbars across all auth containers */
+.login-page-wrapper,
+.login-card-container,
+.register-container,
+.login-showcase-panel,
+.register-showcase-panel,
+.login-form-panel,
+.register-form-panel,
+.interactive-form {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow: hidden !important;
+}
+
+.login-page-wrapper::-webkit-scrollbar,
+.login-card-container::-webkit-scrollbar,
+.register-container::-webkit-scrollbar,
+.login-showcase-panel::-webkit-scrollbar,
+.register-showcase-panel::-webkit-scrollbar,
+.login-form-panel::-webkit-scrollbar,
+.register-form-panel::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Ambient glow blobs */
 .ambient-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(85px);
   pointer-events: none;
   opacity: 0.55;
   z-index: 0;
 }
 
 .glow-top-left {
-  top: -80px;
-  left: -80px;
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.32) 0%, rgba(167, 139, 250, 0.08) 70%, transparent 100%);
+  top: -90px;
+  left: -90px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(167, 139, 250, 0.08) 70%, transparent 100%);
   animation: floatGlow 10s ease-in-out infinite alternate;
 }
 
 .glow-bottom-right {
-  bottom: -80px;
-  right: -80px;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.28) 0%, rgba(192, 132, 252, 0.08) 70%, transparent 100%);
+  bottom: -90px;
+  right: -90px;
+  width: 460px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, rgba(192, 132, 252, 0.08) 70%, transparent 100%);
   animation: floatGlow 12s ease-in-out infinite alternate-reverse;
 }
 
@@ -297,7 +323,7 @@ textarea {
   position: absolute;
   inset: 0;
   background-image: radial-gradient(rgba(139, 92, 246, 0.07) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-size: 22px 22px;
   pointer-events: none;
   z-index: 0;
 }
@@ -307,23 +333,23 @@ textarea {
   100% { transform: translate(30px, 20px) scale(1.08); }
 }
 
-/* Dual Panel Container - EXACT IDENTICAL DIMENSIONS FOR LOGIN & SIGNUP */
+/* Dual Panel Container - EXPANDED & IDENTICAL FOR LOGIN & SIGNUP */
 .login-card-container,
 .register-container {
   position: relative;
   z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  width: 960px;
-  max-width: 960px;
-  height: 525px;
-  min-height: 525px;
-  max-height: 525px;
+  width: 1040px;
+  max-width: 95vw;
+  height: 570px;
+  min-height: 570px;
+  max-height: 570px;
   background: var(--white);
-  border-radius: 18px;
+  border-radius: 20px;
   border: 1px solid rgba(139, 92, 246, 0.18);
-  box-shadow: 0 16px 45px -12px rgba(124, 58, 237, 0.16), 0 6px 18px -4px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
+  box-shadow: 0 20px 50px -12px rgba(124, 58, 237, 0.18), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
+  overflow: hidden !important;
   box-sizing: border-box;
 }
 
@@ -334,11 +360,11 @@ textarea {
   height: 100%;
   max-height: 100%;
   color: var(--white);
-  padding: 1.6rem 2rem;
+  padding: 2rem 2.4rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
+  overflow: hidden !important;
   box-sizing: border-box;
 }
 
@@ -369,31 +395,30 @@ textarea {
   justify-content: space-between;
 }
 
-
 .showcase-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.75rem;
+  gap: 0.45rem;
+  padding: 0.3rem 0.85rem;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: #e0e7ff;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.75rem;
 }
 
 .badge-sparkle {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .showcase-title {
-  font-size: 1.65rem;
-  line-height: 1.2;
+  font-size: 1.85rem;
+  line-height: 1.25;
   font-weight: 800;
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.65rem;
   color: #ffffff;
   letter-spacing: -0.02em;
 }
@@ -406,34 +431,34 @@ textarea {
 }
 
 .showcase-description {
-  font-size: 0.84rem;
-  line-height: 1.45;
+  font-size: 0.88rem;
+  line-height: 1.5;
   color: #cbd5e1;
-  margin: 0 0 1rem;
-  max-width: 400px;
+  margin: 0 0 1.1rem;
+  max-width: 420px;
 }
 
 .showcase-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
 }
 
 .metric-pill {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.75rem;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 11px;
+  border-radius: 12px;
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
 .metric-icon {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   flex-shrink: 0;
 }
 
@@ -443,56 +468,56 @@ textarea {
 }
 
 .metric-text strong {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: #ffffff;
 }
 
 .metric-text span {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   color: #94a3b8;
 }
 
 .showcase-testimonial {
-  padding: 0.65rem 0.9rem;
+  padding: 0.75rem 1rem;
   background: rgba(255, 255, 255, 0.05);
   border-left: 3px solid #a78bfa;
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 12px 12px 0;
   backdrop-filter: blur(8px);
 }
 
 .testimonial-quote {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-style: italic;
   color: #e2e8f0;
-  line-height: 1.4;
-  margin-bottom: 0.35rem;
+  line-height: 1.45;
+  margin-bottom: 0.4rem;
 }
 
 .testimonial-author {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .avatar-circle {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--purple), #c084fc);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .testimonial-author strong {
   display: block;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   color: #ffffff;
 }
 
 .testimonial-author span {
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   color: #94a3b8;
 }
 
@@ -501,52 +526,52 @@ textarea {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 0.75rem 0.95rem;
-  margin-bottom: 0.85rem;
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.95rem;
 }
 
 .highlight-role-badge {
   display: inline-block;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #c084fc;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
 
 .highlight-body {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: #e2e8f0;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .benefits-checklist {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .benefit-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.78rem;
+  gap: 0.65rem;
+  font-size: 0.82rem;
   color: #cbd5e1;
 }
 
 .benefit-bullet {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: rgba(139, 92, 246, 0.3);
   color: #c084fc;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -561,52 +586,51 @@ textarea {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.6rem 2rem;
+  padding: 1.8rem 2.4rem;
   background: var(--white);
-  overflow: hidden;
+  overflow: hidden !important;
   box-sizing: border-box;
 }
 
 .login-form-card,
 .register-form-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-
 .login-card-header {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
 }
 
 .brand-logo-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.65rem;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
   background: rgba(139, 92, 246, 0.09);
   border: 1px solid rgba(139, 92, 246, 0.18);
   border-radius: 999px;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.45rem;
 }
 
 .brand-logo-pill .logo-icon {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: var(--purple);
 }
 
 .brand-logo-pill .logo-name {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--purple-dark);
   letter-spacing: -0.01em;
 }
 
 .login-card-header h2 {
-  margin: 0 0 0.15rem;
-  font-size: 1.35rem;
+  margin: 0 0 0.2rem;
+  font-size: 1.45rem;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.02em;
@@ -614,7 +638,7 @@ textarea {
 
 .login-card-header p {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   color: var(--text-light);
 }
 
@@ -622,35 +646,35 @@ textarea {
 .quick-demo-section {
   background: #f8fafc;
   border: 1px dashed rgba(139, 92, 246, 0.28);
-  border-radius: 9px;
-  padding: 0.4rem 0.65rem;
-  margin-bottom: 0.65rem;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .quick-demo-label {
   display: block;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-light);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
 
 .quick-demo-buttons {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .demo-btn {
   flex: 1;
-  padding: 0.35rem 0.4rem;
-  font-size: 0.72rem;
+  padding: 0.38rem 0.45rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text);
   background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
   box-shadow: none;
   margin-top: 0;
@@ -658,7 +682,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.28rem;
 }
 
 .demo-btn:hover {
@@ -676,32 +700,32 @@ textarea {
 
 /* Role Selector Cards for Signup */
 .role-selection-group {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.7rem;
 }
 
 .section-sublabel {
   display: block;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.35rem;
 }
 
 .role-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .role-select-card {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.45rem 0.65rem;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
   background: #f8fafc;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
   text-align: left;
   margin-top: 0;
@@ -721,7 +745,7 @@ textarea {
 }
 
 .role-card-icon {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   flex-shrink: 0;
 }
 
@@ -731,28 +755,28 @@ textarea {
 }
 
 .role-card-info strong {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--text);
 }
 
 .role-card-info span {
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   color: var(--text-light);
 }
 
 .role-check-icon {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 14px;
-  height: 14px;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: 15px;
+  height: 15px;
   background: var(--purple);
   color: var(--white);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   font-weight: 700;
 }
 
@@ -763,22 +787,22 @@ textarea {
 }
 
 .input-field-group {
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.65rem;
 }
 
 .input-field-group label {
   display: block;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.25rem;
 }
 
 .label-with-link {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.25rem;
 }
 
 .label-with-link label {
@@ -790,7 +814,7 @@ textarea {
   border: none;
   padding: 0;
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 500;
   color: var(--purple);
   cursor: pointer;
@@ -811,7 +835,7 @@ textarea {
 
 .input-icon {
   position: absolute;
-  left: 0.75rem;
+  left: 0.8rem;
   color: #94a3b8;
   display: flex;
   align-items: center;
@@ -819,19 +843,19 @@ textarea {
 }
 
 .input-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .input-with-icon input {
   width: 100%;
-  padding: 0.55rem 0.75rem 0.55rem 2.25rem;
+  padding: 0.62rem 0.85rem 0.62rem 2.45rem;
   margin-top: 0;
   background: #f8fafc;
   color: var(--text);
   border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: 9px;
+  font-size: 0.88rem;
   transition: all 0.2s ease;
   outline: none;
 }
@@ -854,7 +878,7 @@ textarea {
 
 .password-toggle-btn {
   position: absolute;
-  right: 0.5rem;
+  right: 0.55rem;
   background: transparent;
   border: none;
   padding: 0.25rem;
@@ -864,13 +888,13 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 5px;
   box-shadow: none;
 }
 
 .password-toggle-btn svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .password-toggle-btn:hover {
@@ -899,14 +923,14 @@ textarea {
 .meter-info {
   display: flex;
   justify-content: flex-end;
-  gap: 0.3rem;
-  margin-top: 0.15rem;
-  font-size: 0.68rem;
+  gap: 0.35rem;
+  margin-top: 0.18rem;
+  font-size: 0.7rem;
   color: var(--text-light);
 }
 
 .meter-info strong {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
 }
 
 /* Custom Checkbox */
@@ -914,7 +938,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0.1rem 0 0.6rem;
+  margin: 0.15rem 0 0.65rem;
 }
 
 .checkbox-container {
@@ -923,7 +947,7 @@ textarea {
   position: relative;
   cursor: pointer;
   user-select: none;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   color: var(--text-light);
 }
 
@@ -936,12 +960,12 @@ textarea {
 }
 
 .checkmark-box {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   background-color: #f8fafc;
   border: 1.5px solid var(--border);
   border-radius: 4px;
-  margin-right: 0.45rem;
+  margin-right: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -960,7 +984,7 @@ textarea {
 .checkbox-container input:checked ~ .checkmark-box::after {
   content: "";
   width: 4px;
-  height: 7px;
+  height: 8px;
   border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
@@ -970,11 +994,11 @@ textarea {
 /* Submit Button */
 .login-submit-button {
   width: 100%;
-  padding: 0.65rem 1.1rem;
-  margin-top: 0.15rem;
-  font-size: 0.88rem;
+  padding: 0.72rem 1.2rem;
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 9px;
   background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
   color: var(--white);
   border: none;
@@ -988,7 +1012,7 @@ textarea {
 
 .login-submit-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.32);
   background: linear-gradient(135deg, var(--purple-light) 0%, var(--purple-dark) 100%);
 }
 
@@ -1006,12 +1030,12 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .btn-spinner {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #ffffff;
   border-radius: 50%;
@@ -1020,13 +1044,13 @@ textarea {
 
 /* Footer Link */
 .login-card-footer {
-  margin-top: 0.65rem;
+  margin-top: 0.75rem;
   text-align: center;
 }
 
 .login-card-footer p {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-light);
 }
 
@@ -1046,13 +1070,15 @@ textarea {
   .login-page-wrapper {
     height: auto;
     max-height: none;
-    overflow-y: auto;
+    overflow-y: auto !important;
     padding: 1.5rem 1rem;
   }
 
   .login-card-container {
     grid-template-columns: 1fr;
     max-width: 440px;
+    height: auto;
+    min-height: auto;
     max-height: none;
   }
 
@@ -1064,6 +1090,7 @@ textarea {
     padding: 1.8rem 1.4rem;
   }
 }
+
 
 
 
