@@ -1,37 +1,42 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import Navbar from "./components/Navbar";
 import Login from "./auth/Login";
 import Register from "./auth/Register";
 import AdminDashboard from "./pages/AdminDashboard";
 import BrandDashboard from "./pages/BrandDashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import ServerLoadingScreen from "./components/ServerLoadingScreen";
+import Navbar from "./components/Navbar";
+import LoadingSpinner from "./components/LoadingSpinner";
 import { useAuth } from "./context/AuthContext";
 
+// Redirect based on role AFTER auth is resolved
 const HomeRedirect = () => {
-  const { user } = useAuth();
-  
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner message="Checking authentication..." />;
+  }
+
   if (user?.role === "admin") return <Navigate to="/admin" replace />;
   if (user?.role === "brand") return <Navigate to="/brand" replace />;
   if (user?.role === "creator") return <Navigate to="/creator" replace />;
-  
+
   return <Navigate to="/login" replace />;
 };
 
 const App = () => {
-  const { loading } = useAuth();
-
-  if (loading) return <ServerLoadingScreen />;
-
   return (
     <>
       <Navbar />
+
       <Routes>
+        {/* PUBLIC */}
         <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/signup" element={<Register />} />
 
+        {/* PROTECTED */}
         <Route
           path="/admin"
           element={
@@ -58,9 +63,13 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+
+        {/* CATCH ALL */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
 };
 
 export default App;
+

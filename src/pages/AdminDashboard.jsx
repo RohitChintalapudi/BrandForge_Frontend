@@ -1,46 +1,38 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { toast } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
 
 const AdminDashboard = () => {
-  const [campaigns, setCampaigns] = useState([]);
-  const [approvedCount, setApprovedCount] = useState(0);
-  const [viewCampaign, setViewCampaign] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const formatDeadline = (value) => {
-    if (!value) return "Not specified";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const shortDescription = (text, maxChars = 120) => {
-    const s = (text ?? "").toString().trim();
-    if (!s) return "No description available";
-    if (s.length <= maxChars) return s;
-    const cut = s.slice(0, maxChars);
-    const lastSpace = cut.lastIndexOf(" ");
-    return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
-  };
+  const [pendingCampaigns, setPendingCampaigns] = useState([]);
+  const [allCampaigns, setAllCampaigns] = useState([]);
+  const [activeTab, setActiveTab] = useState("pending"); // "pending" | "all"
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest"); // "newest" | "reward" | "deadline"
+  const [approvingId, setApprovingId] = useState(null);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      const [pendingRes, approvedRes] = await Promise.all([
+      const [pendingRes, allRes] = await Promise.allSettled([
         api.get("/api/campaigns/pending"),
         api.get("/api/campaigns"),
       ]);
-      setCampaigns(pendingRes.data);
-      setApprovedCount(approvedRes.data.length);
+
+      if (pendingRes.status === "fulfilled") {
+        setPendingCampaigns(pendingRes.value.data || []);
+      }
+      if (allRes.status === "fulfilled") {
+        setAllCampaigns(allRes.value.data || []);
+      }
     } catch {
       toast.error("Failed to load dashboard data");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -48,657 +40,480 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const approveCampaign = async (id) => {
+  const approveCampaign = async (id, title) => {
+    if (approvingId) return;
+    setApprovingId(id);
+
     try {
       await api.put(`/api/campaigns/${id}/approve`);
-      toast.success("Campaign approved successfully!");
-      setCampaigns((prev) => prev.filter((c) => c._id !== id));
-      setApprovedCount((prev) => prev + 1);
-      setViewCampaign((v) => (v && v._id === id ? null : v));
-    } catch {
-      toast.error("Approval failed");
+      toast.success(`🎉 Campaign "${title || 'Campaign'}" approved & published live!`);
+
+      // Update local state
+      setPendingCampaigns((prev) => prev.filter((c) => c._id !== id));
+      setAllCampaigns((prev) =>
+        prev.map((c) => (c._id === id ? { ...c, status: "approved" } : c))
+      );
+
+      if (selectedCampaign && selectedCampaign._id === id) {
+        setSelectedCampaign((prev) => (prev ? { ...prev, status: "approved" } : null));
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Approval failed");
+    } finally {
+      setApprovingId(null);
     }
   };
 
+  // Metrics
+  const pendingCount = pendingCampaigns.length;
+  const approvedCount = allCampaigns.filter((c) => c.status === "approved").length;
+  const totalCampaignsCount = allCampaigns.length;
+
+  // Calculate pending reward pool sum
+  const pendingRewardSum = pendingCampaigns.reduce((acc, curr) => {
+    const val = parseInt(String(curr.reward).replace(/[^0-9]/g, ""), 10);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  // Active dataset based on tab
+  const currentDataset = activeTab === "pending" ? pendingCampaigns : allCampaigns;
+
+  // Filtered and sorted dataset
+  const displayedCampaigns = currentDataset
+    .filter((c) => {
+      if (!c || !c._id) return false;
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = c.title?.toLowerCase().includes(q);
+      const matchesDesc = c.description?.toLowerCase().includes(q);
+      const matchesReward = String(c.reward)?.toLowerCase().includes(q);
+      return matchesTitle || matchesDesc || matchesReward;
+    })
+    .sort((a, b) => {
+      if (sortBy === "reward") {
+        const rA = parseInt(String(a.reward).replace(/[^0-9]/g, ""), 10) || 0;
+        const rB = parseInt(String(b.reward).replace(/[^0-9]/g, ""), 10) || 0;
+        return rB - rA;
+      }
+      if (sortBy === "deadline") {
+        return new Date(a.deadline || 0) - new Date(b.deadline || 0);
+      }
+      // default "newest"
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
   return (
-    <div className="admin-dashboard-root">
-      <style>{`
-        /* Glassmorphism theme specifically for Admin Dashboard */
-        .admin-dashboard-root {
-          --admin-bg: #0b081a;
-          --admin-card-bg: rgba(255, 255, 255, 0.03);
-          --admin-card-border: rgba(255, 255, 255, 0.08);
-          --admin-card-hover-border: rgba(168, 85, 247, 0.4);
-          --admin-text-main: #f3f4f6;
-          --admin-text-muted: #9ca3af;
-          
-          background-color: var(--admin-bg) !important;
-          color: var(--admin-text-main) !important;
-          min-height: calc(100vh - 74px);
-          position: relative;
-          overflow: hidden;
-          font-family: 'Outfit', 'Inter', sans-serif;
-        }
+    <div className="admin-dashboard-layout">
+      {/* Background ambient lighting */}
+      <div className="ambient-glow glow-top-left"></div>
+      <div className="ambient-glow glow-bottom-right"></div>
+      <div className="ambient-mesh-pattern"></div>
 
-        /* Background Glowing Blobs */
-        .admin-glow-blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(120px);
-          opacity: 0.4;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .blob-purple {
-          width: 450px;
-          height: 450px;
-          background: radial-gradient(circle, rgba(124, 58, 237, 0.6) 0%, transparent 70%);
-          top: -10%;
-          left: -10%;
-          animation: float-blob-1 15s infinite alternate ease-in-out;
-        }
-
-        .blob-indigo {
-          width: 550px;
-          height: 550px;
-          background: radial-gradient(circle, rgba(79, 70, 229, 0.5) 0%, transparent 70%);
-          bottom: -10%;
-          right: -10%;
-          animation: float-blob-2 18s infinite alternate ease-in-out;
-        }
-
-        .blob-pink {
-          width: 380px;
-          height: 380px;
-          background: radial-gradient(circle, rgba(219, 39, 119, 0.4) 0%, transparent 70%);
-          top: 35%;
-          left: 45%;
-          animation: float-blob-3 20s infinite alternate ease-in-out;
-        }
-
-        @keyframes float-blob-1 {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(60px, 40px) scale(1.1); }
-        }
-
-        @keyframes float-blob-2 {
-          0% { transform: translate(0, 0) scale(1.1); }
-          100% { transform: translate(-80px, -50px) scale(0.95); }
-        }
-
-        @keyframes float-blob-3 {
-          0% { transform: translate(0, 0) translate(-30px, 30px); }
-          100% { transform: translate(0, 0) translate(30px, -30px); }
-        }
-
-        /* Main Layout */
-        .admin-container {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 3rem 1.5rem;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Hero Section */
-        .admin-hero {
-          background: linear-gradient(135deg, rgba(25, 20, 60, 0.4), rgba(76, 29, 149, 0.15)) !important;
-          backdrop-filter: blur(12px) !important;
-          -webkit-backdrop-filter: blur(12px) !important;
-          border: 1px solid var(--admin-card-border) !important;
-          border-radius: 24px;
-          padding: 2.2rem 3rem;
-          margin-bottom: 3rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        }
-
-        @media (max-width: 768px) {
-          .admin-hero {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1.5rem;
-            padding: 2rem;
-          }
-        }
-
-        .admin-hero-title {
-          font-size: 2.3rem;
-          font-weight: 850;
-          margin: 0 0 0.5rem;
-          background: linear-gradient(to right, #ffffff, #c084fc, #818cf8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          letter-spacing: -0.03em;
-        }
-
-        .admin-hero-subtitle {
-          font-size: 1.05rem;
-          color: var(--admin-text-muted);
-          margin: 0;
-          font-weight: 500;
-        }
-
-        /* Stats Cards Grid */
-        .admin-stats-grid {
-          display: flex;
-          gap: 1.25rem;
-          flex-wrap: wrap;
-        }
-
-        .admin-stat-card {
-          background: rgba(255, 255, 255, 0.02);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--admin-card-border);
-          border-radius: 16px;
-          padding: 1rem 1.75rem;
-          min-width: 150px;
-          text-align: center;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-        }
-
-        .admin-stat-card::after {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; width: 100%; height: 3px;
-          background: linear-gradient(90deg, #a855f7, #6366f1);
-          opacity: 0.8;
-        }
-
-        .admin-stat-card:hover {
-          transform: translateY(-3px);
-          border-color: var(--admin-card-hover-border);
-          box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
-        }
-
-        .admin-stat-label {
-          font-size: 0.7rem;
-          text-transform: uppercase;
-          color: var(--admin-text-muted);
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          margin-bottom: 0.35rem;
-        }
-
-        .admin-stat-value {
-          font-size: 2rem;
-          font-weight: 900;
-          color: #ffffff;
-          line-height: 1.1;
-        }
-
-        /* Campaign Grid & Cards */
-        .admin-campaign-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-          gap: 2rem;
-        }
-
-        .admin-campaign-card {
-          background: var(--admin-card-bg);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid var(--admin-card-border);
-          border-radius: 20px;
-          padding: 1.8rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          min-height: 290px;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          position: relative;
-        }
-
-        .admin-campaign-card:hover {
-          transform: translateY(-5px);
-          border-color: var(--admin-card-hover-border);
-          box-shadow: 
-            0 15px 30px rgba(0, 0, 0, 0.35),
-            0 0 20px rgba(124, 58, 237, 0.1);
-        }
-
-        .admin-card-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 1rem;
-          margin-bottom: 1.1rem;
-        }
-
-        .admin-card-title {
-          font-size: 1.25rem;
-          font-weight: 750;
-          margin: 0;
-          color: #ffffff;
-          line-height: 1.35;
-          letter-spacing: -0.01em;
-        }
-
-        .admin-badge-pending {
-          background: rgba(245, 158, 11, 0.12);
-          border: 1px solid rgba(245, 158, 11, 0.25);
-          color: #fbbf24;
-          padding: 0.3rem 0.75rem;
-          font-size: 0.7rem;
-          font-weight: 700;
-          border-radius: 99px;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          flex-shrink: 0;
-        }
-
-        .admin-card-desc {
-          font-size: 0.92rem;
-          color: var(--admin-text-muted);
-          line-height: 1.55;
-          margin-bottom: 1.75rem;
-          flex-grow: 1;
-        }
-
-        .admin-card-mid {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-          margin-bottom: 1.25rem;
-        }
-
-        .admin-reward-box h5 {
-          font-size: 0.7rem;
-          color: var(--admin-text-muted);
-          text-transform: uppercase;
-          margin: 0 0 0.25rem;
-          letter-spacing: 0.05em;
-        }
-
-        .admin-reward-value {
-          font-size: 1.15rem;
-          font-weight: 800;
-          color: #c084fc;
-        }
-
-        .admin-date-box h5 {
-          font-size: 0.7rem;
-          color: var(--admin-text-muted);
-          text-transform: uppercase;
-          margin: 0 0 0.25rem;
-          letter-spacing: 0.05em;
-          text-align: right;
-        }
-
-        .admin-date-value {
-          font-size: 0.88rem;
-          font-weight: 600;
-          color: #e5e7eb;
-          text-align: right;
-        }
-
-        .admin-card-actions {
-          display: flex;
-          gap: 0.85rem;
-          width: 100%;
-        }
-
-        /* Neon & Glass Buttons */
-        .btn-approve-neon {
-          flex: 1;
-          background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          color: #ffffff;
-          border: none;
-          border-radius: 12px;
-          padding: 0.75rem 1.25rem;
-          font-size: 0.88rem;
-          font-weight: 700;
-          cursor: pointer;
-          box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);
-          transition: all 0.25s ease;
-          text-align: center;
-        }
-
-        .btn-approve-neon:hover {
-          transform: translateY(-2px);
-          box-shadow: 
-            0 6px 20px rgba(124, 58, 237, 0.45),
-            0 0 10px rgba(99, 102, 241, 0.25);
-          opacity: 1;
-        }
-
-        .btn-approve-neon:active {
-          transform: translateY(0);
-        }
-
-        .btn-details-ghost {
-          background: rgba(255, 255, 255, 0.04);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 12px;
-          padding: 0.75rem 1.1rem;
-          font-size: 0.88rem;
-          font-weight: 650;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          text-align: center;
-        }
-
-        .btn-details-ghost:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.25);
-          transform: translateY(-2px);
-        }
-
-        .btn-details-ghost:active {
-          transform: translateY(0);
-        }
-
-        /* Empty State */
-        .admin-empty-state {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px dashed rgba(255, 255, 255, 0.1);
-          border-radius: 24px;
-          padding: 5rem 2rem;
-          text-align: center;
-          max-width: 550px;
-          margin: 4rem auto;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-          backdrop-filter: blur(10px);
-        }
-
-        .admin-empty-icon {
-          font-size: 3.5rem;
-          margin-bottom: 1.25rem;
-          display: block;
-          animation: pulse-icon 2s infinite alternate ease-in-out;
-        }
-
-        @keyframes pulse-icon {
-          0% { transform: scale(1); opacity: 0.7; }
-          100% { transform: scale(1.08); opacity: 1; }
-        }
-
-        .admin-empty-title {
-          font-size: 1.45rem;
-          font-weight: 750;
-          color: #ffffff;
-          margin: 0 0 0.5rem;
-        }
-
-        .admin-empty-desc {
-          font-size: 0.95rem;
-          color: var(--admin-text-muted);
-          margin: 0;
-        }
-
-        /* Glassmorphic Modal */
-        .admin-modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(8, 6, 16, 0.85);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          display: grid;
-          place-items: center;
-          z-index: 1000;
-          padding: 1.5rem;
-          animation: fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        .admin-modal {
-          background: rgba(18, 15, 34, 0.98);
-          border: 1px solid var(--admin-card-border);
-          box-shadow: 
-            0 24px 50px rgba(0, 0, 0, 0.5),
-            0 0 30px rgba(139, 92, 246, 0.15);
-          border-radius: 24px;
-          max-width: 540px;
-          width: 100%;
-          padding: 2.25rem;
-          position: relative;
-          animation: scale-up 0.3s cubic-bezier(0.34, 1.45, 0.64, 1) both;
-        }
-
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes scale-up {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-
-        .admin-modal-close {
-          position: absolute;
-          top: 1.15rem; right: 1.15rem;
-          background: rgba(255, 255, 255, 0.04) !important;
-          border: none !important;
-          width: 32px !important; height: 32px !important;
-          border-radius: 50% !important;
-          padding: 0 !important;
-          color: #ffffff !important;
-          display: grid !important;
-          place-items: center !important;
-          font-size: 0.95rem !important;
-          cursor: pointer !important;
-          transition: all 0.2s ease !important;
-        }
-
-        .admin-modal-close:hover {
-          background: rgba(255, 255, 255, 0.12);
-          transform: rotate(90deg);
-        }
-
-        .admin-modal-title {
-          font-size: 1.6rem;
-          font-weight: 800;
-          color: #ffffff;
-          margin: 0 0 1.25rem;
-          line-height: 1.3;
-        }
-
-        .admin-modal-body {
-          font-size: 0.98rem;
-          line-height: 1.65;
-          color: #d1d5db;
-          margin-bottom: 1.75rem;
-          max-height: 250px;
-          overflow-y: auto;
-          padding-right: 0.5rem;
-        }
-
-        .admin-modal-body::-webkit-scrollbar {
-          width: 6px;
-        }
-        .admin-modal-body::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 99px;
-        }
-
-        .admin-modal-meta-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1.25rem;
-          padding: 1.1rem;
-          background: rgba(255, 255, 255, 0.01);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          border-radius: 16px;
-          margin-bottom: 2rem;
-        }
-
-        .admin-modal-meta-item h6 {
-          font-size: 0.68rem;
-          text-transform: uppercase;
-          color: var(--admin-text-muted);
-          margin: 0 0 0.3rem;
-          letter-spacing: 0.05em;
-        }
-
-        .admin-modal-meta-item p {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #ffffff;
-          margin: 0;
-        }
-
-        .admin-modal-meta-item p.highlight {
-          color: #c084fc;
-        }
-
-        /* Shimmer Loading */
-        .admin-shimmer-card {
-          height: 290px;
-          border-radius: 20px;
-          background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
-          background-size: 200% 100%;
-          animation: loading-shimmer 1.4s infinite;
-        }
-
-        @keyframes loading-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
-
-      {/* Decorative Blobs */}
-      <div className="admin-glow-blob blob-purple"></div>
-      <div className="admin-glow-blob blob-indigo"></div>
-      <div className="admin-glow-blob blob-pink"></div>
-
-      <div className="admin-container">
-        {/* HERO SECTION */}
-        <div className="admin-hero">
-          <div className="admin-hero-text">
-            <h2 className="admin-hero-title">👑 Admin Dashboard</h2>
-            <p className="admin-hero-subtitle">Review, manage, and approve pending creator campaigns.</p>
-          </div>
-          
-          <div className="admin-stats-grid">
-            <div className="admin-stat-card">
-              <h4 className="admin-stat-label">Pending Reviews</h4>
-              <span className="admin-stat-value">{loading ? "-" : campaigns.length}</span>
+      <div className="dashboard-main-container">
+        {/* Master Control Header */}
+        <div className="admin-welcome-banner">
+          <div className="welcome-text-group">
+            <div className="admin-role-chip">
+              <span>👑 Platform Operations Control</span>
             </div>
-            <div className="admin-stat-card">
-              <h4 className="admin-stat-label">Approved Campaigns</h4>
-              <span className="admin-stat-value">{loading ? "-" : approvedCount}</span>
+            <h1>Admin Oversight & Moderation ⚡</h1>
+            <p>
+              Review pending campaign submissions from brand partners, verify
+              creator guidelines, and grant live platform publication.
+            </p>
+          </div>
+
+          <div className="welcome-actions">
+            <button
+              type="button"
+              className="admin-refresh-btn"
+              onClick={fetchData}
+              disabled={isLoading}
+            >
+              <svg
+                className={isLoading ? "refresh-spinning" : ""}
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+              </svg>
+              <span>{isLoading ? "Refreshing..." : "Refresh Queue"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4-Metric Executive Summary Bar */}
+        <div className="metrics-dashboard-grid">
+          {/* Pending Reviews */}
+          <div className="metric-stat-card stat-pending">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Pending Approval</span>
+              <span className="metric-stat-badge badge-amber">Needs Action</span>
+            </div>
+            <div className="metric-stat-value">{pendingCount}</div>
+            <div className="metric-stat-footer">
+              <span>Awaiting admin verification</span>
+            </div>
+          </div>
+
+          {/* Approved & Live */}
+          <div className="metric-stat-card stat-approved">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Verified & Live</span>
+              <span className="metric-stat-badge badge-green">Active</span>
+            </div>
+            <div className="metric-stat-value">{approvedCount}</div>
+            <div className="metric-stat-footer">
+              <span>Open for creator submissions</span>
+            </div>
+          </div>
+
+          {/* Total Pending Rewards */}
+          <div className="metric-stat-card">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Pending Reward Pool</span>
+              <span className="metric-stat-badge">Escrow Pool</span>
+            </div>
+            <div className="metric-stat-value">
+              ₹{pendingRewardSum.toLocaleString()}
+            </div>
+            <div className="metric-stat-footer">
+              <span>Total budget in review</span>
+            </div>
+          </div>
+
+          {/* System Status */}
+          <div className="metric-stat-card stat-action">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">System Health</span>
+              <span className="metric-stat-badge badge-green">Operational</span>
+            </div>
+            <div className="metric-stat-value" style={{ fontSize: "1.5rem" }}>
+              Ready & Live
+            </div>
+            <div className="metric-stat-footer">
+              <span className="live-status-dot"></span>
+              <span>All backend services online</span>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
-        {loading ? (
-          <div className="admin-campaign-grid">
-            <div className="admin-shimmer-card"></div>
-            <div className="admin-shimmer-card"></div>
-            <div className="admin-shimmer-card"></div>
+        {/* Campaign Moderation Explorer & Filter Bar */}
+        <div className="campaigns-explorer-header">
+          <div className="explorer-title-group">
+            <h2>Campaign Queue</h2>
+            <span className="count-pill">{displayedCampaigns.length} items</span>
           </div>
-        ) : campaigns.length === 0 ? (
-          <div className="admin-empty-state">
-            <span className="admin-empty-icon">✨</span>
-            <h3 className="admin-empty-title">All Campaigns Reviewed</h3>
-            <p className="admin-empty-desc">No campaigns are currently waiting for approval. Check back later!</p>
+
+          <div className="explorer-controls">
+            {/* Search Input */}
+            <div className="search-input-box">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by title, reward..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Sort Selector */}
+            <select
+              className="admin-sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="newest">Sort: Newest First</option>
+              <option value="reward">Sort: Highest Reward</option>
+              <option value="deadline">Sort: Urgent Deadline</option>
+            </select>
+
+            {/* View Mode Pills */}
+            <div className="filter-pill-group">
+              <button
+                type="button"
+                className={`filter-pill ${activeTab === "pending" ? "active" : ""}`}
+                onClick={() => setActiveTab("pending")}
+              >
+                Pending Queue ({pendingCount})
+              </button>
+              <button
+                type="button"
+                className={`filter-pill ${activeTab === "all" ? "active" : ""}`}
+                onClick={() => setActiveTab("all")}
+              >
+                All Campaigns ({totalCampaignsCount})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Campaign Moderation Grid */}
+        {displayedCampaigns.length === 0 ? (
+          <div className="empty-campaigns-box">
+            <div className="empty-icon">
+              {activeTab === "pending" ? "✨" : "📂"}
+            </div>
+            <h3>
+              {activeTab === "pending"
+                ? "Queue is completely clear!"
+                : "No campaigns found"}
+            </h3>
+            <p>
+              {activeTab === "pending"
+                ? "All submitted brand campaigns have been moderated and published live."
+                : "Try adjusting your search criteria or switch to the pending queue."}
+            </p>
           </div>
         ) : (
-          <div className="admin-campaign-grid">
-            {campaigns
-              .filter((c) => c && c._id)
-              .map((c) => (
-                <div key={c._id} className="admin-campaign-card">
-                  <div>
-                    <div className="admin-card-top">
-                      <h3 className="admin-card-title">{c.title || "Untitled Campaign"}</h3>
-                      <span className="admin-badge-pending">Pending</span>
-                    </div>
-                    <p className="admin-card-desc">
-                      {shortDescription(c.description)}
-                    </p>
+          <div className="admin-campaigns-grid">
+            {displayedCampaigns.map((c) => {
+              const isPending = c.status === "pending";
+              const isApproving = approvingId === c._id;
+
+              return (
+                <div
+                  className={`admin-campaign-card ${isPending ? "card-pending-glow" : ""}`}
+                  key={c._id}
+                >
+                  <div className="card-top-row">
+                    <span
+                      className={`status-chip ${
+                        isPending ? "chip-pending" : "chip-approved"
+                      }`}
+                    >
+                      <span className="status-dot"></span>
+                      {isPending ? "Awaiting Review" : "Approved & Live"}
+                    </span>
+
+                    {c.deadline && (
+                      <div className="deadline-tag">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                          <line x1="16" x2="16" y1="2" y2="6" />
+                          <line x1="8" x2="8" y1="2" y2="6" />
+                          <line x1="3" x2="21" y1="10" y2="10" />
+                        </svg>
+                        <span>
+                          Due: {new Date(c.deadline).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  
-                  <div>
-                    <div className="admin-card-mid">
-                      <div className="admin-reward-box">
-                        <h5>Reward</h5>
-                        <span className="admin-reward-value">{c.reward || "Not specified"}</span>
-                      </div>
-                      <div className="admin-date-box">
-                        <h5>Deadline</h5>
-                        <span className="admin-date-value">{formatDeadline(c.deadline)}</span>
-                      </div>
+
+                  <h3 className="campaign-card-title">{c.title || "Untitled Campaign"}</h3>
+                  <p className="campaign-card-desc">
+                    {c.description || "No description provided."}
+                  </p>
+
+                  <div className="admin-card-details">
+                    <div className="reward-badge-group">
+                      <span className="reward-label">Offered Reward</span>
+                      <span className="reward-amount">
+                        {c.reward ? `₹${c.reward}` : "₹0"}
+                      </span>
                     </div>
 
-                    <div className="admin-card-actions">
+                    {c.brand && (
+                      <div className="brand-id-chip" title={c.brand}>
+                        <span>Brand Partner</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="admin-card-actions">
+                    <button
+                      type="button"
+                      className="admin-inspect-btn"
+                      onClick={() => setSelectedCampaign(c)}
+                    >
+                      <span>Inspect Details</span>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+
+                    {isPending ? (
                       <button
                         type="button"
-                        className="btn-approve-neon"
-                        onClick={() => approveCampaign(c._id)}
+                        className="admin-approve-btn"
+                        onClick={() => approveCampaign(c._id, c.title)}
+                        disabled={isApproving}
                       >
-                        Approve Campaign
+                        {isApproving ? (
+                          <div className="btn-spinner-row">
+                            <span className="btn-spinner"></span>
+                            <span>Approving...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <span>Approve & Publish</span>
+                            <span className="approve-rocket">🚀</span>
+                          </>
+                        )}
                       </button>
-                      <button
-                        type="button"
-                        className="btn-details-ghost"
-                        onClick={() => setViewCampaign(c)}
-                      >
-                        Details
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="approved-confirmed-badge">
+                        <span>✓ Live on Platform</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* DETAIL MODAL */}
-      {viewCampaign && (
+      {/* Campaign Details Inspector Modal */}
+      {selectedCampaign && (
         <div
-          className="admin-modal-overlay"
-          onClick={() => setViewCampaign(null)}
+          className="create-modal-backdrop"
+          onClick={() => setSelectedCampaign(null)}
         >
           <div
-            className="admin-modal"
+            className="create-modal-card admin-inspector-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              className="admin-modal-close"
-              onClick={() => setViewCampaign(null)}
-            >
-              ✕
-            </button>
-
-            <h3 className="admin-modal-title">{viewCampaign.title || "Untitled Campaign"}</h3>
-            
-            <div className="admin-modal-body">
-              {viewCampaign.description || "No description available."}
+            <div className="modal-top-bar">
+              <div className="modal-title-group">
+                <span className="modal-badge">
+                  {selectedCampaign.status === "pending"
+                    ? "Pending Verification"
+                    : "Verified Campaign"}
+                </span>
+                <h2>{selectedCampaign.title}</h2>
+              </div>
+              <button
+                type="button"
+                className="modal-close-button"
+                onClick={() => setSelectedCampaign(null)}
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="admin-modal-meta-grid">
-              <div className="admin-modal-meta-item">
-                <h6>Reward</h6>
-                <p className="highlight">{viewCampaign.reward || "Not specified"}</p>
+            <div className="inspector-content">
+              <div className="inspector-stats-row">
+                <div className="inspector-stat-box">
+                  <span className="inspector-label">Reward Pool</span>
+                  <strong className="inspector-value text-purple">
+                    {selectedCampaign.reward ? `₹${selectedCampaign.reward}` : "₹0"}
+                  </strong>
+                </div>
+
+                <div className="inspector-stat-box">
+                  <span className="inspector-label">Deadline</span>
+                  <strong className="inspector-value">
+                    {selectedCampaign.deadline
+                      ? new Date(selectedCampaign.deadline).toLocaleDateString()
+                      : "Open"}
+                  </strong>
+                </div>
+
+                <div className="inspector-stat-box">
+                  <span className="inspector-label">Moderation Status</span>
+                  <strong
+                    className={`inspector-value ${
+                      selectedCampaign.status === "approved"
+                        ? "text-green"
+                        : "text-amber"
+                    }`}
+                  >
+                    {selectedCampaign.status === "approved"
+                      ? "Approved & Live"
+                      : "Pending Review"}
+                  </strong>
+                </div>
               </div>
-              <div className="admin-modal-meta-item">
-                <h6>Deadline</h6>
-                <p>{formatDeadline(viewCampaign.deadline)}</p>
+
+              <div className="inspector-section">
+                <label className="inspector-section-label">
+                  Campaign Description & Creator Guidelines
+                </label>
+                <div className="inspector-description-box">
+                  {selectedCampaign.description || "No description provided."}
+                </div>
+              </div>
+
+              <div className="inspector-meta-bar">
+                <span>Campaign ID: {selectedCampaign._id}</span>
+                {selectedCampaign.createdAt && (
+                  <span>
+                    Submitted: {new Date(selectedCampaign.createdAt).toLocaleString()}
+                  </span>
+                )}
               </div>
             </div>
 
-            <button
-              type="button"
-              className="btn-approve-neon"
-              style={{ width: "100%" }}
-              onClick={() => approveCampaign(viewCampaign._id)}
-            >
-              Approve Campaign
-            </button>
+            <div className="modal-action-bar">
+              <button
+                type="button"
+                className="modal-cancel-btn"
+                onClick={() => setSelectedCampaign(null)}
+              >
+                Close Inspector
+              </button>
+
+              {selectedCampaign.status === "pending" && (
+                <button
+                  type="button"
+                  className="modal-submit-btn"
+                  onClick={() => {
+                    approveCampaign(selectedCampaign._id, selectedCampaign.title);
+                  }}
+                  disabled={approvingId === selectedCampaign._id}
+                >
+                  {approvingId === selectedCampaign._id ? (
+                    <div className="btn-spinner-row">
+                      <span className="btn-spinner"></span>
+                      <span>Publishing...</span>
+                    </div>
+                  ) : (
+                    <span>Approve & Publish Campaign 🚀</span>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

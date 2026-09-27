@@ -1,262 +1,386 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
-import { useNavigate, Link, useNavigationType } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import ServerLoadingScreen from "../components/ServerLoadingScreen";
 
 const Login = () => {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animationFrameId;
-
-    const resizeCanvas = () => {
-      canvas.width = canvas.parentElement.offsetWidth;
-      canvas.height = canvas.parentElement.offsetHeight;
-    };
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-
-    const particles = [];
-    const particleCount = 28;
-    const maxDistance = 110;
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.65,
-        vy: (Math.random() - 0.5) * 0.65,
-        radius: Math.random() * 2 + 1.2,
-      });
-    }
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "rgba(124, 58, 237, 0.55)"; // Purple nodes (more visible)
-      ctx.strokeStyle = "rgba(124, 58, 237, 0.22)"; // Soft lines (more visible)
-      ctx.lineWidth = 1;
-
-      for (let i = 0; i < particleCount; i++) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-
-        if (p.x < 0 || p.x > canvas.width) p.vx = -p.vx;
-        if (p.y < 0 || p.y > canvas.height) p.vy = -p.vy;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        for (let j = i + 1; j < particleCount; j++) {
-          const p2 = particles[j];
-          const dx = p.x - p2.x;
-          const dy = p.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < maxDistance) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("resize", resizeCanvas);
-    };
-  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
-
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState("all"); // demo role helper
 
   const navigate = useNavigate();
-  const navigationType = useNavigationType();
   const { user, setUser } = useAuth();
-  const [submitting, setSubmitting] = useState(false);
 
+  // Redirect if already logged in
   useEffect(() => {
-    if (user && navigationType === "POP") {
-      if (user.role === "admin") navigate("/admin", { replace: true });
-      if (user.role === "brand") navigate("/brand", { replace: true });
-      if (user.role === "creator") navigate("/creator", { replace: true });
-    }
-  }, [user, navigationType, navigate]);
+    if (!user) return;
 
-  const validateEmail = (val) => {
-    if (!val.trim()) {
-      return "Email is required";
+    switch (user.role) {
+      case "admin":
+        navigate("/admin", { replace: true });
+        break;
+      case "brand":
+        navigate("/brand", { replace: true });
+        break;
+      case "creator":
+        navigate("/creator", { replace: true });
+        break;
+      default:
+        break;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(val)) {
-      return "Please enter a valid email address";
-    }
-    return "";
-  };
-
-  const validatePassword = (val) => {
-    if (!val) {
-      return "Password is required";
-    }
-    if (val.length < 6) {
-      return "Password must be at least 6 characters";
-    }
-    return "";
-  };
-
-  // Run validation on touch/change
-  useEffect(() => {
-    if (emailTouched) {
-      setEmailError(validateEmail(email));
-    }
-  }, [email, emailTouched]);
-
-  useEffect(() => {
-    if (passwordTouched) {
-      setPasswordError(validatePassword(password));
-    }
-  }, [password, passwordTouched]);
+  }, [user, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
-    // Mark all as touched to trigger validations
-    setEmailTouched(true);
-    setPasswordTouched(true);
-
-    const emailErr = validateEmail(email);
-    const passErr = validatePassword(password);
-
-    if (emailErr || passErr) {
-      setEmailError(emailErr);
-      setPasswordError(passErr);
-      return;
-    }
+    setIsSubmitting(true);
 
     try {
-      setSubmitting(true);
       await api.post("/api/auth/login", { email, password });
-      const me = await api.get("/api/auth/me");
 
-      setUser(me.data);
+      const { data } = await api.get("/api/auth/me");
+      setUser(data);
 
-      toast.success("Login successful");
+      toast.success(`Welcome back, ${data.name || "User"}! 🎉`);
 
-      if (me.data.role === "admin") navigate("/admin", { replace: true });
-      if (me.data.role === "brand") navigate("/brand", { replace: true });
-      if (me.data.role === "creator") navigate("/creator", { replace: true });
+      // Immediate redirect based on role
+      switch (data.role) {
+        case "admin":
+          navigate("/admin", { replace: true });
+          break;
+        case "brand":
+          navigate("/brand", { replace: true });
+          break;
+        case "creator":
+          navigate("/creator", { replace: true });
+          break;
+        default:
+          navigate("/", { replace: true });
+          break;
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Login failed");
+      toast.error(
+        err.response?.data?.message ||
+          "Invalid credentials. Please check your email and password."
+      );
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const hasErrors = !!(emailTouched && emailError) || !!(passwordTouched && passwordError);
+  const handleQuickFill = (role, demoEmail, demoPass) => {
+    setActiveTab(role);
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    toast.info(`Filled sample credentials for ${role.toUpperCase()}`);
+  };
 
   return (
-    <>
-      {submitting && <ServerLoadingScreen />}
-      <div className="auth-split-layout">
-      {/* Left panel: Brand Forge showcase with nice purple animations */}
-      <div className="auth-side-showcase">
-        <div className="auth-orb auth-orb-1"></div>
-        <div className="auth-orb auth-orb-2"></div>
-        <div className="auth-orb auth-orb-3"></div>
+    <div className="login-page-wrapper">
+      {/* Background ambient lighting */}
+      <div className="ambient-glow glow-top-left"></div>
+      <div className="ambient-glow glow-bottom-right"></div>
+      <div className="ambient-mesh-pattern"></div>
 
-        {/* Floating Particles */}
-        <div className="auth-particle auth-particle-1"></div>
-        <div className="auth-particle auth-particle-2"></div>
-        <div className="auth-particle auth-particle-3"></div>
-        <div className="auth-particle auth-particle-4"></div>
+      <div className="login-card-container">
+        {/* Left Side: Brand Showcase Panel */}
+        <div className="login-showcase-panel">
+          <div className="showcase-content">
+            <div className="showcase-badge">
+              <span className="badge-sparkle">✨</span>
+              <span>Next-Gen Creator & Brand Ecosystem</span>
+            </div>
 
-        <div className="showcase-glass-card">
-          <h1>BrandForge</h1>
-          <p>
-            Where digital creators and forward-thinking brands collaborate to forge high-impact campaigns and unlock spectacular rewards.
-          </p>
-          <div className="showcase-cta">
-            Collaborate. Create. Conquer.
+            <h1 className="showcase-title">
+              Elevate campaigns, <br />
+              <span className="gradient-text">amplify your reach.</span>
+            </h1>
+
+            <p className="showcase-description">
+              BrandForge connects innovative brands with high-impact creators
+              for seamless content collaborations, tracking, and rewards.
+            </p>
+
+            {/* Interactive Feature Stats Cards */}
+            <div className="showcase-metrics">
+              <div className="metric-pill">
+                <div className="metric-icon">🚀</div>
+                <div className="metric-text">
+                  <strong>Instant Matching</strong>
+                  <span>Direct brand & creator sync</span>
+                </div>
+              </div>
+
+              <div className="metric-pill">
+                <div className="metric-icon">💎</div>
+                <div className="metric-text">
+                  <strong>Guaranteed Payouts</strong>
+                  <span>Secure campaign milestones</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="showcase-testimonial">
+              <div className="testimonial-quote">
+                "BrandForge transformed how we launch creator campaigns in days
+                instead of weeks."
+              </div>
+              <div className="testimonial-author">
+                <div className="avatar-circle">✨</div>
+                <div>
+                  <strong>Creative Network</strong>
+                  <span>Global Brand Partnership</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Interactive Login Form */}
+        <div className="login-form-panel">
+          <div className="login-form-card">
+            <div className="login-card-header">
+              <div className="brand-logo-pill">
+                <span className="logo-name">BrandForge</span>
+              </div>
+              <h2>Sign in to Account</h2>
+              <p>Welcome back! Please enter your details to continue.</p>
+            </div>
+
+
+            {/* Quick Demo Credentials Pill selector */}
+            <div className="quick-demo-section">
+              <span className="quick-demo-label">Quick Test Login:</span>
+              <div className="quick-demo-buttons">
+                <button
+                  type="button"
+                  className={`demo-btn ${activeTab === "creator" ? "active" : ""}`}
+                  onClick={() =>
+                    handleQuickFill(
+                      "creator",
+                      "creator@brandforge.io",
+                      "Password123!"
+                    )
+                  }
+                >
+                  🎨 Creator
+                </button>
+                <button
+                  type="button"
+                  className={`demo-btn ${activeTab === "brand" ? "active" : ""}`}
+                  onClick={() =>
+                    handleQuickFill(
+                      "brand",
+                      "brand@brandforge.io",
+                      "Password123!"
+                    )
+                  }
+                >
+                  🏢 Brand
+                </button>
+                <button
+                  type="button"
+                  className={`demo-btn ${activeTab === "admin" ? "active" : ""}`}
+                  onClick={() =>
+                    handleQuickFill(
+                      "admin",
+                      "admin@brandforge.io",
+                      "Password123!"
+                    )
+                  }
+                >
+                  👑 Admin
+                </button>
+              </div>
+            </div>
+
+            <form className="interactive-form" onSubmit={handleLogin}>
+              {/* Email Field with Icon */}
+              <div className="input-field-group">
+                <label htmlFor="login-email">Email Address</label>
+                <div className="input-with-icon">
+                  <span className="input-icon">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-email"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              {/* Password Field with Icon & Toggle */}
+              <div className="input-field-group">
+                <div className="label-with-link">
+                  <label htmlFor="login-password">Password</label>
+                  <button
+                    type="button"
+                    className="text-link-button"
+                    onClick={() =>
+                      toast.info(
+                        "Please contact your administrator or reset via backend"
+                      )
+                    }
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <div className="input-with-icon">
+                  <span className="input-icon">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect
+                        width="18"
+                        height="11"
+                        x="3"
+                        y="11"
+                        rx="2"
+                        ry="2"
+                      />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                        <line x1="2" x2="22" y1="2" y2="22" />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me Option */}
+              <div className="form-extras">
+                <label className="checkbox-container">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="checkmark-box"></span>
+                  <span className="checkbox-label">Remember me on this device</span>
+                </label>
+              </div>
+
+              {/* Submit Button with Loading Animation */}
+              <button
+                type="submit"
+                className={`login-submit-button ${isSubmitting ? "submitting" : ""}`}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <div className="button-spinner-row">
+                    <span className="btn-spinner"></span>
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  <div className="button-label-row">
+                    <span>Sign In to Dashboard</span>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+
+              {/* Footer Links */}
+              <div className="login-card-footer">
+                <p>
+                  Don&apos;t have an account yet?{" "}
+                  <Link to="/register" className="highlight-link">
+                    Create free account
+                  </Link>
+                </p>
+              </div>
+            </form>
           </div>
         </div>
       </div>
-
-      <div className="auth-divider-line"></div>
-
-      {/* Right panel: Login form */}
-      <div className="auth-side-form">
-        <canvas ref={canvasRef} className="auth-network-canvas" />
-        <div className="auth-form-wrapper">
-          <form className="auth-form" onSubmit={handleLogin} noValidate>
-            <div className="auth-header">
-              <h2>Welcome Back</h2>
-              <p>Sign in to your BrandForge account</p>
-            </div>
-
-            <div className={`form-group ${emailTouched && emailError ? "is-invalid" : ""} ${emailTouched && !emailError ? "is-valid" : ""}`}>
-              <label htmlFor="login-email">Email Address</label>
-              <input
-                id="login-email"
-                type="email"
-                placeholder="Enter email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setEmailTouched(true)}
-                required
-              />
-              {emailTouched && emailError && (
-                <span className="validation-error">{emailError}</span>
-              )}
-            </div>
-
-            <div className={`form-group ${passwordTouched && passwordError ? "is-invalid" : ""} ${passwordTouched && !passwordError ? "is-valid" : ""}`}>
-              <label htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => setPasswordTouched(true)}
-                required
-              />
-              {passwordTouched && passwordError && (
-                <span className="validation-error">{passwordError}</span>
-              )}
-            </div>
-
-            <button type="submit" className="auth-button" disabled={hasErrors}>
-              Login
-            </button>
-
-            <div className="auth-footer">
-              <p>
-                Don't have an account? <Link to="/register">Sign up</Link>
-              </p>
-            </div>
-          </form>
-        </div>
-      </div>
-      </div>
-    </>
+    </div>
   );
 };
 
 export default Login;
+
