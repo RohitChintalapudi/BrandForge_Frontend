@@ -1,24 +1,24 @@
 import { Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
+import LoadingSpinner from "./LoadingSpinner";
 
 const ProtectedRoute = ({ children, role }) => {
-  const [status, setStatus] = useState("loading");
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    api
-      .get("/api/auth/me")
-      .then((res) => {
-        if (res.data.role === role) setStatus("allowed");
-        else setStatus("denied");
-      })
-      .catch(() => setStatus("denied"));
-  }, [role]);
+  if (loading) {
+    return <LoadingSpinner message="Verifying session..." />;
+  }
 
-  if (status === "loading") return null;
-  if (status === "denied") return <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role && user.role !== role) {
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 };
 
 export default ProtectedRoute;
+
