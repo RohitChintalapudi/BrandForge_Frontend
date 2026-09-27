@@ -23,9 +23,9 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand-link">
-        <span className="navbar-logo-icon">⚡</span>
         <span className="navbar-logo-text">BrandForge</span>
       </Link>
+
 
       <div className="navbar-links">
         {!user && (

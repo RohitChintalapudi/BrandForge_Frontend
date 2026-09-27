@@ -131,12 +131,12 @@ const Register = () => {
           <div className="login-form-card register-form-card">
             <div className="login-card-header">
               <div className="brand-logo-pill">
-                <span className="logo-icon">⚡</span>
                 <span className="logo-name">BrandForge</span>
               </div>
               <h2>Create Account</h2>
               <p>Get started with your free BrandForge account</p>
             </div>
+
 
             {/* Role Selection Radio Cards */}
             <div className="role-selection-group">

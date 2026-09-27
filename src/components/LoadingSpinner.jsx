@@ -6,9 +6,9 @@ const LoadingSpinner = ({ message = "Loading BrandForge..." }) => {
       <div className="loading-container">
         <div className="brandforge-spinner">
           <div className="spinner-ring"></div>
-          <div className="spinner-core">⚡</div>
         </div>
         <h3 className="loading-title">BrandForge</h3>
+
         <p className="loading-message">{message}</p>
       </div>
     </div>

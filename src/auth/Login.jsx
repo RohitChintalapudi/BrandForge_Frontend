@@ -131,7 +131,7 @@ const Login = () => {
                 instead of weeks."
               </div>
               <div className="testimonial-author">
-                <div className="avatar-circle">⚡</div>
+                <div className="avatar-circle">✨</div>
                 <div>
                   <strong>Creative Network</strong>
                   <span>Global Brand Partnership</span>
@@ -146,12 +146,12 @@ const Login = () => {
           <div className="login-form-card">
             <div className="login-card-header">
               <div className="brand-logo-pill">
-                <span className="logo-icon">⚡</span>
                 <span className="logo-name">BrandForge</span>
               </div>
               <h2>Sign in to Account</h2>
               <p>Welcome back! Please enter your details to continue.</p>
             </div>
+
 
             {/* Quick Demo Credentials Pill selector */}
             <div className="quick-demo-section">
