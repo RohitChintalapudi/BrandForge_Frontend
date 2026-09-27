@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { toast } from "react-toastify";
 import Confetti from "react-confetti";
+import { useAuth } from "../context/AuthContext";
 
 const BrandDashboard = () => {
+  const { user } = useAuth();
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -16,7 +19,11 @@ const BrandDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [winner, setWinner] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [showWinner, setShowWinner] = useState(false); 
+  const [showWinner, setShowWinner] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchCampaigns = async () => {
     try {
@@ -33,20 +40,26 @@ const BrandDashboard = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (isCreating) return;
+
+    setIsCreating(true);
     try {
       await api.post("/api/campaigns", form);
-      toast.success("Campaign created (pending admin approval)");
+      toast.success("Campaign created successfully! (Pending admin review) 🚀");
       setForm({ title: "", description: "", reward: "", deadline: "" });
+      setShowCreateModal(false);
       fetchCampaigns();
-    } catch {
-      toast.error("Failed to create campaign");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create campaign");
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const openSubmissions = async (campaign) => {
     setSelectedCampaign(campaign);
     setWinner(null);
-    setShowWinner(false); 
+    setShowWinner(false);
     setShowConfetti(false);
 
     try {
@@ -54,16 +67,19 @@ const BrandDashboard = () => {
       setSubmissions(res.data || []);
 
       const winning = res.data?.find((s) => s.status === "winner");
-      if (winning) setWinner(winning);
+      if (winning) {
+        setWinner(winning);
+        setShowWinner(true);
+      }
     } catch {
-      toast.error("Failed to load submissions");
+      toast.error("Failed to load submissions for this campaign");
     }
   };
 
   const selectWinner = async (id) => {
     try {
       await api.put(`/api/submissions/${id}/winner`);
-      toast.success("Winner selected");
+      toast.success("🏆 Winner crowned successfully!");
 
       setSubmissions((prev) =>
         prev.map((s) => (s._id === id ? { ...s, status: "winner" } : s))
@@ -72,201 +88,610 @@ const BrandDashboard = () => {
       const selected = submissions.find((s) => s._id === id);
       if (selected) {
         setWinner({ ...selected, status: "winner" });
-        setShowWinner(false);
+        setShowWinner(true);
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 6000);
       }
-    } catch {
-      toast.error("Failed to select winner");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to select winner");
     }
   };
 
-  const viewWinner = () => {
-    setShowWinner(true);
+  const triggerConfettiCelebration = () => {
     setShowConfetti(true);
-
-    setTimeout(() => {
-      setShowConfetti(false);
-    }, 5000);
+    setTimeout(() => setShowConfetti(false), 5000);
   };
 
+  const addPromptTag = (tagText) => {
+    setForm((prev) => ({
+      ...prev,
+      description: prev.description
+        ? `${prev.description}\n• ${tagText}`
+        : `• ${tagText}`,
+    }));
+  };
+
+  // Metrics calculation
+  const totalCampaigns = campaigns.length;
+  const approvedCampaigns = campaigns.filter((c) => c.status === "approved").length;
+  const pendingCampaigns = campaigns.filter((c) => c.status === "pending").length;
+
+  // Filtered campaigns
+  const filteredCampaigns = campaigns.filter((c) => {
+    if (!c || !c._id) return false;
+    const matchesSearch =
+      c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="dashboard-wrapper">
-      {showConfetti && <Confetti />}
-      <div className="dashboard-background">
-        <div className="dashboard-blob blob-1"></div>
-        <div className="dashboard-blob blob-2"></div>
-        <div className="dashboard-blob blob-3"></div>
-      </div>
+    <div className="brand-dashboard-layout">
+      {showConfetti && <Confetti recycle={false} numberOfPieces={350} />}
 
-      <div className="dashboard">
-        <div className="dashboard-header">
-          <h2>🏢 Brand Dashboard</h2>
-          <p className="dashboard-subtitle">
-            Create campaigns and select winners
-          </p>
-        </div>
+      {/* Ambient background glows */}
+      <div className="ambient-glow glow-top-left"></div>
+      <div className="ambient-glow glow-bottom-right"></div>
+      <div className="ambient-mesh-pattern"></div>
 
+      <div className="dashboard-main-container">
+        {/* Main Dashboard Overview (When no single campaign is selected) */}
         {!selectedCampaign && (
           <>
-            <div className="card premium-card create-card">
-              <h3>Create Campaign</h3>
+            {/* Header & Action Bar */}
+            <div className="dashboard-welcome-banner">
+              <div className="welcome-text-group">
+                <div className="brand-role-chip">
+                  <span>🏢 Brand Management Portal</span>
+                </div>
+                <h1>Welcome back, {user?.name || "Brand Partner"} 👋</h1>
+                <p>
+                  Create high-impact creator campaigns, monitor submissions, and
+                  reward top talent.
+                </p>
+              </div>
 
-              <form onSubmit={handleCreate}>
-                <input
-                  placeholder="Campaign Title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
-                />
-
-                <textarea
-                  placeholder="Campaign Description"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      description: e.target.value,
-                    })
-                  }
-                  required
-                />
-
-                <input
-                  placeholder="Reward (e.g ₹5000)"
-                  value={form.reward}
-                  onChange={(e) => setForm({ ...form, reward: e.target.value })}
-                  required
-                />
-
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      deadline: e.target.value,
-                    })
-                  }
-                  required
-                />
-
-                <button className="action-btn premium-btn">
-                  Create Campaign
+              <div className="welcome-actions">
+                <button
+                  type="button"
+                  className="create-campaign-btn"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <span className="btn-plus-icon">+</span>
+                  <span>Create Campaign</span>
                 </button>
-              </form>
+              </div>
             </div>
 
-            <div className="grid" style={{ marginTop: "2rem" }}>
-              {campaigns
-                .filter((c) => c && c._id)
-                .map((c) => (
-                  <div className="card premium-card" key={c._id}>
-                    <div className="card-header">
-                      <h3>{c.title || "Untitled Campaign"}</h3>
-                      {c.status && (
-                        <span className={`badge ${c.status}`}>
-                          {c.status === "pending" && "Pending Approval"}
-                          {c.status === "approved" && "Approved"}
-                        </span>
+            {/* Quick Metrics Bar */}
+            <div className="metrics-dashboard-grid">
+              <div className="metric-stat-card">
+                <div className="metric-stat-header">
+                  <span className="metric-stat-label">Total Campaigns</span>
+                  <span className="metric-stat-badge">All-time</span>
+                </div>
+                <div className="metric-stat-value">{totalCampaigns}</div>
+                <div className="metric-stat-footer">
+                  <span>Active campaign portfolio</span>
+                </div>
+              </div>
+
+              <div className="metric-stat-card stat-approved">
+                <div className="metric-stat-header">
+                  <span className="metric-stat-label">Live & Approved</span>
+                  <span className="metric-stat-badge badge-green">Live</span>
+                </div>
+                <div className="metric-stat-value">{approvedCampaigns}</div>
+                <div className="metric-stat-footer">
+                  <span>Open for creator submissions</span>
+                </div>
+              </div>
+
+              <div className="metric-stat-card stat-pending">
+                <div className="metric-stat-header">
+                  <span className="metric-stat-label">Pending Review</span>
+                  <span className="metric-stat-badge badge-amber">Review</span>
+                </div>
+                <div className="metric-stat-value">{pendingCampaigns}</div>
+                <div className="metric-stat-footer">
+                  <span>Awaiting admin verification</span>
+                </div>
+              </div>
+
+              <div className="metric-stat-card stat-action">
+                <div className="metric-stat-header">
+                  <span className="metric-stat-label">Instant Action</span>
+                  <span className="metric-stat-badge">Quick</span>
+                </div>
+                <p className="quick-action-hint">Launch a new campaign in seconds</p>
+                <button
+                  type="button"
+                  className="quick-action-link"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  Launch Now →
+                </button>
+              </div>
+            </div>
+
+            {/* Campaign Explorer Header & Filters */}
+            <div className="campaigns-explorer-header">
+              <div className="explorer-title-group">
+                <h2>Your Campaigns</h2>
+                <span className="count-pill">{filteredCampaigns.length}</span>
+              </div>
+
+              <div className="explorer-controls">
+                {/* Search Bar */}
+                <div className="search-input-box">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search campaigns..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="filter-pill-group">
+                  <button
+                    type="button"
+                    className={`filter-pill ${statusFilter === "all" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("all")}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-pill ${statusFilter === "approved" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("approved")}
+                  >
+                    Approved
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-pill ${statusFilter === "pending" ? "active" : ""}`}
+                    onClick={() => setStatusFilter("pending")}
+                  >
+                    Pending
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Campaigns Grid */}
+            {filteredCampaigns.length === 0 ? (
+              <div className="empty-campaigns-box">
+                <div className="empty-icon">📢</div>
+                <h3>No campaigns found</h3>
+                <p>
+                  {searchQuery || statusFilter !== "all"
+                    ? "Try adjusting your search query or status filter."
+                    : "You haven't created any campaigns yet. Start engaging creators today!"}
+                </p>
+                <button
+                  type="button"
+                  className="create-campaign-btn"
+                  onClick={() => setShowCreateModal(true)}
+                  style={{ marginTop: "1rem" }}
+                >
+                  + Create Your First Campaign
+                </button>
+              </div>
+            ) : (
+              <div className="brand-campaigns-grid">
+                {filteredCampaigns.map((c) => (
+                  <div className="brand-campaign-card" key={c._id}>
+                    <div className="card-top-row">
+                      <span
+                        className={`status-chip ${
+                          c.status === "approved" ? "chip-approved" : "chip-pending"
+                        }`}
+                      >
+                        <span className="status-dot"></span>
+                        {c.status === "approved" ? "Approved & Live" : "Pending Approval"}
+                      </span>
+
+                      {c.deadline && (
+                        <div className="deadline-tag">
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                            <line x1="16" x2="16" y1="2" y2="6" />
+                            <line x1="8" x2="8" y1="2" y2="6" />
+                            <line x1="3" x2="21" y1="10" y2="10" />
+                          </svg>
+                          <span>{new Date(c.deadline).toLocaleDateString()}</span>
+                        </div>
                       )}
                     </div>
 
-                    <p className="card-description">
-                      {c.description || "No description available"}
-                    </p>
+                    <h3 className="campaign-card-title">{c.title}</h3>
+                    <p className="campaign-card-desc">{c.description}</p>
 
-                    <button
-                      className="action-btn premium-btn"
-                      style={{ marginTop: "0.8rem" }}
-                      onClick={() => openSubmissions(c)}
-                    >
-                      View Submissions
-                    </button>
+                    <div className="card-bottom-bar">
+                      <div className="reward-badge-group">
+                        <span className="reward-label">Reward Pool</span>
+                        <span className="reward-amount">{c.reward || "₹0"}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="manage-submissions-btn"
+                        onClick={() => openSubmissions(c)}
+                      >
+                        <span>Submissions</span>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M5 12h14" />
+                          <path d="m12 5 7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
-            </div>
+              </div>
+            )}
           </>
         )}
 
+        {/* Selected Campaign Submissions View */}
         {selectedCampaign && (
-          <>
-            <button
-              className="action-btn premium-btn back-btn"
-              onClick={() => {
-                setSelectedCampaign(null);
-                setShowWinner(false);
-                setShowConfetti(false);
-              }}
-            >
-              ← Back
-            </button>
-
-            <h3 className="section-title">Submissions</h3>
-
-            {winner && !showWinner && (
+          <div className="submissions-view-container">
+            {/* Header Navigation & Breadcrumb */}
+            <div className="submissions-header-bar">
               <button
-                className="action-btn premium-btn"
-                style={{ marginBottom: "1.5rem" }}
-                onClick={viewWinner}
+                type="button"
+                className="back-nav-btn"
+                onClick={() => {
+                  setSelectedCampaign(null);
+                  setShowWinner(false);
+                  setShowConfetti(false);
+                }}
               >
-                View Winner 🎉
-              </button>
-            )}
-
-            {winner && showWinner && (
-              <div
-                className="card premium-card winner-card"
-                style={{ marginBottom: "2rem" }}
-              >
-                <h3>🏆 Winner Selected</h3>
-                <p>
-                  <strong>{winner.creator?.name}</strong>
-                </p>
-
-                <a
-                  href={winner.contentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="content-link"
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  View Winning Content
-                </a>
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+                <span>Back to All Campaigns</span>
+              </button>
+
+              <div className="campaign-context-badge">
+                <span className="campaign-context-title">
+                  {selectedCampaign.title}
+                </span>
+                <span className="context-reward-chip">
+                  Reward: {selectedCampaign.reward}
+                </span>
+              </div>
+            </div>
+
+            {/* Winner Spotlight Banner */}
+            {winner && showWinner && (
+              <div className="winner-spotlight-card">
+                <div className="spotlight-left">
+                  <div className="trophy-badge">🏆</div>
+                  <div>
+                    <span className="winner-tag">Official Winner Crowned</span>
+                    <h2 className="winner-creator-name">
+                      {winner.creator?.name || "Talented Creator"}
+                    </h2>
+                    <p className="winner-subtitle">
+                      Awarded for top content submission on this campaign.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="spotlight-actions">
+                  <a
+                    href={winner.contentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="view-winning-content-btn"
+                  >
+                    <span>View Winning Content ↗</span>
+                  </a>
+                  <button
+                    type="button"
+                    className="celebrate-btn"
+                    onClick={triggerConfettiCelebration}
+                  >
+                    Celebrate 🎉
+                  </button>
+                </div>
               </div>
             )}
 
-            <div className="grid">
-              {submissions.map((s) => (
-                <div className="card premium-card" key={s._id}>
-                  <p>
-                    <strong>Creator:</strong> {s.creator?.name}
-                  </p>
+            {/* Submissions Section Header */}
+            <div className="submissions-section-header">
+              <div>
+                <h2>Creator Submissions ({submissions.length})</h2>
+                <p>Review uploaded videos and select the winning creator</p>
+              </div>
 
-                  <a
-                    href={s.contentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="content-link"
-                  >
-                    View Content
-                  </a>
-
-                  {s.status === "winner" ? (
-                    <span className="badge winner">🏆 Winner</span>
-                  ) : (
-                    <button
-                      className="action-btn premium-btn"
-                      onClick={() => selectWinner(s._id)}
-                    >
-                      Select Winner
-                    </button>
-                  )}
-                </div>
-              ))}
+              {winner && !showWinner && (
+                <button
+                  type="button"
+                  className="view-winner-toggle-btn"
+                  onClick={() => {
+                    setShowWinner(true);
+                    triggerConfettiCelebration();
+                  }}
+                >
+                  🏆 View Crowned Winner
+                </button>
+              )}
             </div>
-          </>
+
+            {/* Submissions Grid */}
+            {submissions.length === 0 ? (
+              <div className="empty-submissions-box">
+                <div className="empty-icon">⏳</div>
+                <h3>No Submissions Yet</h3>
+                <p>
+                  Creators are currently crafting content for this campaign. Check
+                  back soon!
+                </p>
+              </div>
+            ) : (
+              <div className="submissions-grid">
+                {submissions.map((s, index) => {
+                  const isWinning = s.status === "winner";
+
+                  return (
+                    <div
+                      className={`submission-card ${isWinning ? "card-winner-highlight" : ""}`}
+                      key={s._id}
+                    >
+                      <div className="submission-card-header">
+                        <div className="creator-profile-badge">
+                          <div className="creator-avatar-circle">
+                            {s.creator?.name
+                              ? s.creator.name.charAt(0).toUpperCase()
+                              : `#${index + 1}`}
+                          </div>
+                          <div>
+                            <strong className="creator-name">
+                              {s.creator?.name || "Anonymous Creator"}
+                            </strong>
+                            <span className="creator-email">
+                              {s.creator?.email || "Verified Creator"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isWinning && (
+                          <span className="winner-ribbon">🏆 Winner</span>
+                        )}
+                      </div>
+
+                      <div className="submission-content-preview">
+                        <a
+                          href={s.contentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="content-url-pill"
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                          </svg>
+                          <span className="url-truncate">{s.contentUrl}</span>
+                          <span className="open-icon">↗</span>
+                        </a>
+                      </div>
+
+                      <div className="submission-card-footer">
+                        {isWinning ? (
+                          <div className="winner-confirmed-pill">
+                            <span>Selected Winner</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="select-winner-btn"
+                            onClick={() => selectWinner(s._id)}
+                          >
+                            <span>Award Winner 🏆</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Modal: Create Campaign Drawer */}
+      {showCreateModal && (
+        <div
+          className="create-modal-backdrop"
+          onClick={() => !isCreating && setShowCreateModal(false)}
+        >
+          <div
+            className="create-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-top-bar">
+              <div className="modal-title-group">
+                <span className="modal-badge">New Launch</span>
+                <h2>Create Creator Campaign</h2>
+              </div>
+              <button
+                type="button"
+                className="modal-close-button"
+                onClick={() => !isCreating && setShowCreateModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form className="modal-form" onSubmit={handleCreate}>
+              <div className="modal-form-grid">
+                {/* Title */}
+                <div className="modal-field">
+                  <label htmlFor="modal-campaign-title">Campaign Title</label>
+                  <input
+                    id="modal-campaign-title"
+                    placeholder="e.g. Summer Fitness Reel Showcase"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {/* Reward */}
+                <div className="modal-field">
+                  <label htmlFor="modal-campaign-reward">Reward Pool (INR / ₹)</label>
+                  <input
+                    id="modal-campaign-reward"
+                    placeholder="e.g. ₹15,000"
+                    value={form.reward}
+                    onChange={(e) => setForm({ ...form, reward: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {/* Deadline */}
+                <div className="modal-field modal-full-span">
+                  <label htmlFor="modal-campaign-deadline">Submission Deadline</label>
+                  <input
+                    id="modal-campaign-deadline"
+                    type="date"
+                    value={form.deadline}
+                    onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="modal-field modal-full-span">
+                  <div className="label-with-tags">
+                    <label htmlFor="modal-campaign-desc">Campaign Description & Guidelines</label>
+                    <span className="tag-hint">Click to append requirements:</span>
+                  </div>
+
+                  {/* Quick Tag Helper Chips */}
+                  <div className="tag-chips-row">
+                    <button
+                      type="button"
+                      className="tag-chip"
+                      onClick={() => addPromptTag("9:16 Vertical Video format (Instagram Reel/TikTok)")}
+                    >
+                      + 9:16 Reel
+                    </button>
+                    <button
+                      type="button"
+                      className="tag-chip"
+                      onClick={() => addPromptTag("Mention @BrandForge in caption")}
+                    >
+                      + Mention Brand
+                    </button>
+                    <button
+                      type="button"
+                      className="tag-chip"
+                      onClick={() => addPromptTag("Min 30 seconds high-res 1080p")}
+                    >
+                      + 1080p Quality
+                    </button>
+                  </div>
+
+                  <textarea
+                    id="modal-campaign-desc"
+                    placeholder="Describe your goals, brand talking points, guidelines, and what you're looking for..."
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                    rows="4"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="modal-action-bar">
+                <button
+                  type="button"
+                  className="modal-cancel-btn"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={isCreating}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="modal-submit-btn"
+                  disabled={isCreating}
+                >
+                  {isCreating ? (
+                    <div className="btn-spinner-row">
+                      <span className="btn-spinner"></span>
+                      <span>Publishing Campaign...</span>
+                    </div>
+                  ) : (
+                    <span>Publish Campaign 🚀</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default BrandDashboard;
+
