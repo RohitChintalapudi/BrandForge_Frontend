@@ -163,7 +163,7 @@ const Login = () => {
                   onClick={() =>
                     handleQuickFill(
                       "creator",
-                      "creator@brandforge.com",
+                      "creator@brandforge.io",
                       "Password123!"
                     )
                   }
@@ -176,7 +176,7 @@ const Login = () => {
                   onClick={() =>
                     handleQuickFill(
                       "brand",
-                      "brand@brandforge.com",
+                      "brand@brandforge.io",
                       "Password123!"
                     )
                   }
@@ -189,7 +189,7 @@ const Login = () => {
                   onClick={() =>
                     handleQuickFill(
                       "admin",
-                      "admin@brandforge.com",
+                      "admin@brandforge.io",
                       "Password123!"
                     )
                   }
