@@ -10,7 +10,9 @@ const Navbar = () => {
   if (loading) return null;
 
   const isAuthPage =
-    location.pathname === "/login" || location.pathname === "/register";
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/signup";
 
   const handleLogout = async () => {
     await logout();
@@ -20,20 +22,30 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <h2>BrandForge</h2>
+      <Link to="/" className="navbar-brand-link">
+        <span className="navbar-logo-icon">⚡</span>
+        <span className="navbar-logo-text">BrandForge</span>
+      </Link>
 
       <div className="navbar-links">
         {!user && (
           <>
-            <Link to="/login">Login</Link>
-            <Link to="/register">Register</Link>
+            <Link to="/login" className={location.pathname === "/login" ? "active-link" : ""}>
+              Sign In
+            </Link>
+            <Link to="/register" className={`navbar-cta-btn ${isAuthPage && location.pathname !== "/login" ? "active" : ""}`}>
+              Get Started
+            </Link>
           </>
         )}
 
         {user && !isAuthPage && (
-          <button className="action-btn" onClick={handleLogout}>
-            Logout
-          </button>
+          <div className="navbar-user-section">
+            <span className="user-role-badge">{user.role}</span>
+            <button className="action-btn navbar-logout-btn" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         )}
       </div>
     </nav>
@@ -41,3 +53,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

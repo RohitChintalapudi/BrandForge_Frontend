@@ -54,16 +54,30 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 10px var(--shadow);
+  padding: 0.9rem 2.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-.navbar h2 {
-  margin: 0;
-  font-size: 1.25rem;
+.navbar-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.navbar-logo-icon {
+  font-size: 1.3rem;
   color: var(--purple);
+}
+
+.navbar-logo-text {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--purple-dark);
+  letter-spacing: -0.02em;
 }
 
 .navbar-links {
@@ -72,15 +86,59 @@ a:hover {
   gap: 1.5rem;
 }
 
-.navbar a {
+.navbar-links a {
   color: var(--text);
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
 }
 
-.navbar a:hover {
+.navbar-links a:hover,
+.navbar-links a.active-link {
   color: var(--purple);
 }
+
+.navbar-cta-btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+  color: var(--white) !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 3px 10px rgba(139, 92, 246, 0.25);
+  transition: all 0.2s ease !important;
+}
+
+.navbar-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(139, 92, 246, 0.35);
+}
+
+.navbar-user-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-role-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--purple-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.navbar-logout-btn {
+  margin-top: 0 !important;
+  padding: 0.45rem 1rem !important;
+  font-size: 0.85rem !important;
+  border-radius: 8px !important;
+}
+
 
 /* =====================================================
    BUTTONS
@@ -787,6 +845,187 @@ textarea {
   text-decoration: underline;
 }
 
+/* =====================================================
+   CREATE ACCOUNT / SIGNUP FLOW ENHANCEMENTS
+===================================================== */
+.register-container {
+  max-width: 1080px;
+}
+
+.register-showcase-panel {
+  background: linear-gradient(145deg, #180d38 0%, #2e1065 50%, #0f172a 100%);
+}
+
+.role-highlight-box {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.8rem;
+  transition: all 0.3s ease;
+}
+
+.highlight-role-badge {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.45rem;
+}
+
+.highlight-body {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.55;
+}
+
+.benefits-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.benefit-bullet {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.3);
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Role Selector Cards */
+.role-selection-group {
+  margin-bottom: 1.3rem;
+}
+
+.section-sublabel {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.role-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.role-select-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  margin-top: 0;
+  box-shadow: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.role-select-card:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: var(--purple-light);
+  transform: translateY(-1px);
+}
+
+.role-select-card.active {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.role-card-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.role-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.role-card-info strong {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.role-card-info span {
+  font-size: 0.74rem;
+  color: var(--text-light);
+}
+
+.role-check-icon {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 18px;
+  height: 18px;
+  background: var(--purple);
+  color: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Password Strength Meter */
+.password-meter-container {
+  margin-top: 0.5rem;
+}
+
+.meter-track {
+  width: 100%;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.meter-info {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.meter-info strong {
+  font-size: 0.75rem;
+}
+
 /* Responsive adjustments */
 @media (max-width: 880px) {
   .login-card-container {
@@ -803,6 +1042,7 @@ textarea {
     padding: 2.5rem 1.8rem;
   }
 }
+
 
 /* Standard Auth Page for Register */
 .auth-page {
