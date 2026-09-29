@@ -359,7 +359,7 @@ textarea {
   100% { transform: translate(30px, 20px) scale(1.08); }
 }
 
-/* Dual Panel Container - EXPANDED & IDENTICAL FOR LOGIN & SIGNUP */
+/* Dual Panel Container - EXPANDED & BALANCED FOR LOGIN & SIGNUP */
 .login-card-container,
 .register-container {
   position: relative;
@@ -368,15 +368,15 @@ textarea {
   grid-template-columns: 1fr 1fr;
   width: 1040px;
   max-width: 95vw;
-  height: 570px;
-  min-height: 570px;
-  max-height: 570px;
+  min-height: 610px;
+  height: auto;
   background: var(--white);
-  border-radius: 20px;
+  border-radius: 22px;
   border: 1px solid rgba(139, 92, 246, 0.18);
-  box-shadow: 0 20px 50px -12px rgba(124, 58, 237, 0.18), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
-  overflow: hidden !important;
+  box-shadow: 0 24px 60px -12px rgba(124, 58, 237, 0.18), 0 8px 24px -4px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
   box-sizing: border-box;
+  animation: authCardEnter 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Left Showcase Panel - Identical across Login & Register */
@@ -384,14 +384,13 @@ textarea {
 .register-showcase-panel {
   position: relative;
   height: 100%;
-  max-height: 100%;
   color: var(--white);
-  padding: 2rem 2.4rem;
+  padding: 2.2rem 2.4rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden !important;
   box-sizing: border-box;
+  animation: authShowcaseFade 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .login-showcase-panel {
@@ -607,21 +606,24 @@ textarea {
 .register-form-panel {
   position: relative;
   height: 100%;
-  max-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 1.8rem 2.4rem;
   background: var(--white);
-  overflow: hidden !important;
   box-sizing: border-box;
+  animation: authFormSlide 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.register-form-panel {
+  padding: 1.4rem 2.4rem;
 }
 
 .login-form-card,
 .register-form-card {
   width: 100%;
-  max-width: 380px;
+  max-width: 390px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -629,6 +631,40 @@ textarea {
 
 .login-card-header {
   margin-bottom: 0.75rem;
+}
+
+.register-form-card .login-card-header {
+  margin-bottom: 0.5rem;
+}
+
+.register-form-card .role-selection-group {
+  margin-bottom: 0.5rem;
+}
+
+.register-form-card .role-select-card {
+  padding: 0.42rem 0.65rem;
+}
+
+.register-form-card .input-field-group {
+  margin-bottom: 0.48rem;
+}
+
+.register-form-card .input-with-icon input {
+  padding: 0.55rem 0.8rem 0.55rem 2.45rem;
+  font-size: 0.86rem;
+}
+
+.register-form-card .form-extras {
+  margin: 0.15rem 0 0.48rem;
+}
+
+.register-form-card .login-submit-button {
+  padding: 0.68rem 1.2rem;
+  margin-top: 0.1rem;
+}
+
+.register-form-card .login-card-footer {
+  margin-top: 0.55rem;
 }
 
 .brand-logo-pill {
@@ -1091,8 +1127,42 @@ textarea {
   text-decoration: underline;
 }
 
+/* Smooth Auth Switch Animations */
+@keyframes authCardEnter {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes authShowcaseFade {
+  0% {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes authFormSlide {
+  0% {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Responsive adjustments */
-@media (max-width: 880px) {
+@media (max-width: 920px) {
   .login-page-wrapper {
     height: auto;
     max-height: none;
@@ -1100,20 +1170,23 @@ textarea {
     padding: 1.5rem 1rem;
   }
 
-  .login-card-container {
+  .login-card-container,
+  .register-container {
     grid-template-columns: 1fr;
-    max-width: 440px;
+    max-width: 480px;
     height: auto;
     min-height: auto;
     max-height: none;
   }
 
-  .login-showcase-panel {
+  .login-showcase-panel,
+  .register-showcase-panel {
     display: none;
   }
 
-  .login-form-panel {
-    padding: 1.8rem 1.4rem;
+  .login-form-panel,
+  .register-form-panel {
+    padding: 2rem 1.6rem;
   }
 }
 
