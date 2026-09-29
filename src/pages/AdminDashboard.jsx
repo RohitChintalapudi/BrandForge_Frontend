@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { toast } from "react-toastify";
-import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
 
   const [pendingCampaigns, setPendingCampaigns] = useState([]);
   const [allCampaigns, setAllCampaigns] = useState([]);

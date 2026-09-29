@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -46,7 +46,9 @@ const Register = () => {
     if (isSubmitting) return;
 
     if (!agreeTerms) {
-      toast.warning("Please accept the Terms of Service to proceed.");
+      toast("⚠️ Please accept the Terms of Service to proceed.", {
+        style: { border: "1px solid rgba(245,158,11,0.3)", background: "#fffbeb" },
+      });
       return;
     }
 

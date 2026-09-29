@@ -4,10 +4,26 @@ const LoadingSpinner = ({ message = "Loading BrandForge..." }) => {
   return (
     <div className="loading-screen">
       <div className="loading-container">
-        <div className="brandforge-spinner">
-          <div className="spinner-ring"></div>
+        {/* Animated logo mark */}
+        <div className="loading-logo-wrapper">
+          <div className="loading-logo-ring loading-ring-outer"></div>
+          <div className="loading-logo-ring loading-ring-inner"></div>
+          <div className="loading-logo-core">
+            <span className="loading-logo-letter">B</span>
+          </div>
         </div>
-        <h3 className="loading-title">BrandForge</h3>
+
+        {/* Brand name */}
+        <div className="loading-brand-name">
+          Brand<span className="loading-brand-accent">Forge</span>
+        </div>
+
+        {/* Animated dots bar */}
+        <div className="loading-dots-bar">
+          <span className="loading-dot"></span>
+          <span className="loading-dot"></span>
+          <span className="loading-dot"></span>
+        </div>
 
         <p className="loading-message">{message}</p>
       </div>
