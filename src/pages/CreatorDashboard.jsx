@@ -1,34 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import api from "../api/axios";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
+import Confetti from "react-confetti";
+import { useAuth } from "../context/AuthContext";
 import {
   getCampaignIdFromRef,
-  prizeForWin,
-  titleForWin,
+  totalWonSummary,
 } from "../utils/creatorPrizes";
 
 const CreatorDashboard = () => {
+  const { user } = useAuth();
+
   const [campaigns, setCampaigns] = useState([]);
   const [mySubmissions, setMySubmissions] = useState([]);
   const [wins, setWins] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [viewCampaign, setViewCampaign] = useState(null);
   const [contentUrl, setContentUrl] = useState("");
+  const [touchedUrl, setTouchedUrl] = useState(false);
+  const [urlError, setUrlError] = useState("");
+  const [isSubmittingPitch, setIsSubmittingPitch] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Search and Filtering
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all"); // "all" | "open" | "submitted" | "wins"
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [campaignsRes, submissionsRes, winsRes] = await Promise.all([
+        const [campaignsRes, submissionsRes, winsRes] = await Promise.allSettled([
           api.get("/api/campaigns"),
           api.get("/api/submissions/mine"),
           api.get("/api/submissions/my-wins"),
         ]);
 
-        setCampaigns(campaignsRes.data || []);
-        setMySubmissions(submissionsRes.data || []);
-        setWins(winsRes.data || []);
+        if (campaignsRes.status === "fulfilled") setCampaigns(campaignsRes.value.data || []);
+        if (submissionsRes.status === "fulfilled") setMySubmissions(submissionsRes.value.data || []);
+        if (winsRes.status === "fulfilled") setWins(winsRes.value.data || []);
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
         toast.error("Failed to load dashboard data");
@@ -40,13 +51,34 @@ const CreatorDashboard = () => {
     loadData();
   }, []);
 
-  const hasSubmitted = (campaignId) =>
-    mySubmissions.some(
-      (s) => getCampaignIdFromRef(s.campaign) === String(campaignId)
-    );
+  const hasSubmitted = useCallback(
+    (campaignId) =>
+      mySubmissions.some(
+        (s) => getCampaignIdFromRef(s.campaign) === String(campaignId)
+      ),
+    [mySubmissions]
+  );
+
+  const getSubmissionForCampaign = useCallback(
+    (campaignId) =>
+      mySubmissions.find(
+        (s) => getCampaignIdFromRef(s.campaign) === String(campaignId)
+      ),
+    [mySubmissions]
+  );
+
+  const hasWon = useCallback(
+    (campaignId) =>
+      wins.some(
+        (w) =>
+          getCampaignIdFromRef(w.campaign ?? w.campaignId) ===
+          String(campaignId)
+      ),
+    [wins]
+  );
 
   const formatDeadline = (value) => {
-    if (!value) return "Not specified";
+    if (!value) return "No deadline specified";
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
     return d.toLocaleDateString(undefined, {
@@ -56,1035 +88,654 @@ const CreatorDashboard = () => {
     });
   };
 
-  const shortDescription = (text, maxChars = 110) => {
-    const s = (text ?? "").toString().trim();
-    if (!s) return "No description available";
-    if (s.length <= maxChars) return s;
-    const cut = s.slice(0, maxChars);
-    const lastSpace = cut.lastIndexOf(" ");
-    return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
+  const validateUrl = (val) => {
+    const trimmed = (val || "").trim();
+    if (!trimmed) {
+      return "Media or Drive URL is required.";
+    }
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return "URL must begin with http:// or https://";
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (!parsed.hostname || !parsed.hostname.includes(".")) {
+        return "Please enter a valid web domain address.";
+      }
+    } catch {
+      return "Please enter a valid URL (e.g., https://drive.google.com/...)";
+    }
+    return "";
+  };
+
+  const detectPlatformBadge = (url) => {
+    const s = (url || "").toLowerCase();
+    if (s.includes("drive.google.com")) return "📁 Google Drive";
+    if (s.includes("dropbox.com")) return "📦 Dropbox";
+    if (s.includes("youtube.com") || s.includes("youtu.be")) return "🎥 YouTube";
+    if (s.includes("instagram.com")) return "📸 Instagram";
+    if (s.includes("tiktok.com")) return "🎵 TikTok";
+    if (s.includes("loom.com")) return "🎬 Loom";
+    if (s.includes("vimeo.com")) return "📽️ Vimeo";
+    if (s.includes("onedrive") || s.includes("1drv.ms")) return "☁️ OneDrive";
+    if (/^https?:\/\//i.test(s)) return "🔗 Public Web Link";
+    return null;
+  };
+
+  const handleUrlChange = (val) => {
+    setContentUrl(val);
+    if (touchedUrl) {
+      setUrlError(validateUrl(val));
+    }
   };
 
   const closeModal = () => {
     setSelectedCampaign(null);
     setContentUrl("");
+    setTouchedUrl(false);
+    setUrlError("");
+    setIsSubmittingPitch(false);
   };
 
   const submitContent = async (e) => {
     e.preventDefault();
+    if (isSubmittingPitch) return;
 
+    setTouchedUrl(true);
+    const err = validateUrl(contentUrl);
+    setUrlError(err);
+
+    if (err) {
+      toast.error(err);
+      return;
+    }
+
+    setIsSubmittingPitch(true);
     try {
       await api.post("/api/submissions", {
         campaignId: selectedCampaign._id,
-        contentUrl,
+        contentUrl: contentUrl.trim(),
       });
 
-      toast.success("Content submitted successfully!");
+      toast.success("Pitch submitted successfully! 🚀");
       closeModal();
 
       const res = await api.get("/api/submissions/mine");
       setMySubmissions(res.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Submission failed");
+    } finally {
+      setIsSubmittingPitch(false);
     }
   };
 
+  const triggerCelebration = () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 5000);
+  };
+
+  // Metrics
+  const approvedCampaigns = useMemo(
+    () => campaigns.filter((c) => c.status === "approved"),
+    [campaigns]
+  );
+
+  const openOpportunitiesCount = useMemo(
+    () => approvedCampaigns.filter((c) => !hasSubmitted(c._id)).length,
+    [approvedCampaigns, hasSubmitted]
+  );
+
+  const totalEarningsWon = useMemo(
+    () => totalWonSummary(wins, campaigns) || "₹0",
+    [wins, campaigns]
+  );
+
+  // Filtered List
+  const filteredCampaigns = useMemo(() => {
+    return approvedCampaigns.filter((c) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        c.title?.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q) ||
+        c.reward?.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (activeFilter === "open") return !hasSubmitted(c._id);
+      if (activeFilter === "submitted") return hasSubmitted(c._id);
+      if (activeFilter === "wins") return hasWon(c._id);
+      return true;
+    });
+  }, [approvedCampaigns, searchQuery, activeFilter, hasSubmitted, hasWon]);
+
   return (
-    <div className="creator-dashboard-root">
-      <style>{`
-        /* High-end executive dark theme for Creator Dashboard */
-        .creator-dashboard-root {
-          --c-bg: #070514;
-          --c-surface: rgba(255, 255, 255, 0.03);
-          --c-surface-hover: rgba(255, 255, 255, 0.06);
-          --c-border: rgba(255, 255, 255, 0.06);
-          --c-border-hover: rgba(168, 85, 247, 0.4);
-          --c-primary: #7c3aed;
-          --c-primary-glow: rgba(124, 58, 237, 0.3);
-          --c-gold: #fbbf24;
-          --c-gold-glow: rgba(251, 191, 36, 0.2);
-          --c-text-main: #f3f4f6;
-          --c-text-muted: #9ca3af;
-          
-          background-color: var(--c-bg) !important;
-          color: var(--c-text-main) !important;
-          min-height: calc(100vh - 74px);
-          position: relative;
-          overflow: hidden;
-          font-family: 'Outfit', 'Plus Jakarta Sans', 'Inter', sans-serif;
-        }
-
-        /* Ambient background glow */
-        .c-ambient-glow {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(140px);
-          opacity: 0.45;
-          pointer-events: none;
-          z-index: 0;
-        }
-        
-        .glow-purple {
-          width: 500px;
-          height: 500px;
-          background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-          top: -15%;
-          left: -10%;
-          animation: float-glow-1 20s infinite alternate ease-in-out;
-        }
-        
-        .glow-blue {
-          width: 600px;
-          height: 600px;
-          background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
-          bottom: -15%;
-          right: -10%;
-          animation: float-glow-2 25s infinite alternate ease-in-out;
-        }
-        
-        .glow-pink {
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, #ec4899 0%, transparent 70%);
-          top: 30%;
-          left: 40%;
-          animation: float-glow-3 22s infinite alternate ease-in-out;
-        }
-
-        @keyframes float-glow-1 {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(80px, 40px) scale(1.15); }
-        }
-        
-        @keyframes float-glow-2 {
-          0% { transform: translate(0, 0) scale(1.1); }
-          100% { transform: translate(-100px, -60px) scale(0.9); }
-        }
-        
-        @keyframes float-glow-3 {
-          0% { transform: translate(-30px, 30px); }
-          100% { transform: translate(30px, -30px); }
-        }
-
-        .c-container {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 3rem 1.5rem;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Command Hero Card */
-        .c-hero {
-          background: linear-gradient(135deg, rgba(20, 15, 50, 0.4), rgba(40, 15, 80, 0.2)) !important;
-          backdrop-filter: blur(16px) !important;
-          -webkit-backdrop-filter: blur(16px) !important;
-          border: 1px solid var(--c-border) !important;
-          border-radius: 28px;
-          padding: 2.5rem 3.5rem;
-          margin-bottom: 3rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-        }
-
-        .c-hero::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.12), transparent 50%);
-          pointer-events: none;
-        }
-
-        @media (max-width: 768px) {
-          .c-hero {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1.5rem;
-            padding: 2rem;
-          }
-        }
-
-        .c-hero-title {
-          font-size: 2.6rem;
-          font-weight: 850;
-          margin: 0 0 0.5rem;
-          background: linear-gradient(to right, #ffffff, #c084fc, #818cf8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          letter-spacing: -0.03em;
-        }
-
-        .c-hero-subtitle {
-          font-size: 1.1rem;
-          color: var(--c-text-muted);
-          margin: 0;
-          font-weight: 500;
-          max-width: 600px;
-          line-height: 1.6;
-        }
-
-        /* Glass Widgets Grid */
-        .c-stats-grid {
-          display: flex;
-          gap: 1.5rem;
-          flex-wrap: wrap;
-        }
-
-        .c-stat-card {
-          background: rgba(255, 255, 255, 0.02);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid var(--c-border);
-          border-radius: 20px;
-          padding: 1.1rem 2rem;
-          min-width: 170px;
-          text-align: center;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-        }
-
-        .c-stat-card::after {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; width: 100%; height: 3px;
-          background: linear-gradient(90deg, #a855f7, #6366f1);
-          opacity: 0.8;
-        }
-
-        .c-stat-card:hover {
-          transform: translateY(-4px);
-          border-color: var(--c-border-hover);
-          box-shadow: 0 10px 25px var(--c-primary-glow);
-        }
-
-        .c-stat-label {
-          font-size: 0.72rem;
-          text-transform: uppercase;
-          color: var(--c-text-muted);
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          margin-bottom: 0.4rem;
-        }
-
-        .c-stat-value {
-          font-size: 2.1rem;
-          font-weight: 900;
-          color: #ffffff;
-          line-height: 1.1;
-        }
-
-        /* Congratulations Glass Banner */
-        .c-congrats-card {
-          background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(217, 119, 6, 0.03)) !important;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(251, 191, 36, 0.3) !important;
-          border-radius: 24px;
-          padding: 1.8rem 2.5rem;
-          margin-bottom: 3.5rem;
-          display: flex;
-          align-items: center;
-          gap: 1.75rem;
-          box-shadow: 
-            0 10px 30px rgba(0, 0, 0, 0.2),
-            inset 0 1px 0 rgba(255, 255, 255, 0.05);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .c-congrats-card::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: radial-gradient(circle at 100% 100%, rgba(251, 191, 36, 0.08), transparent 50%);
-          pointer-events: none;
-        }
-
-        .c-congrats-icon-box {
-          font-size: 3.2rem;
-          animation: c-bounce 2s infinite alternate ease-in-out;
-        }
-
-        @keyframes c-bounce {
-          0% { transform: translateY(0) rotate(0deg); }
-          100% { transform: translateY(-8px) rotate(5deg); }
-        }
-
-        .c-congrats-info h3 {
-          font-size: 1.5rem;
-          font-weight: 850;
-          margin: 0 0 0.35rem;
-          background: linear-gradient(to right, #fbbf24, #f59e0b, #d97706);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .c-congrats-info p {
-          font-size: 1.05rem;
-          color: #f3f4f6;
-          margin: 0;
-          font-weight: 500;
-        }
-
-        .c-congrats-info strong {
-          color: #fbbf24;
-          font-weight: 800;
-        }
-
-        /* Achievements / Wins Cards */
-        .c-win-card {
-          background: rgba(251, 191, 36, 0.015);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(251, 191, 36, 0.15);
-          border-radius: 24px;
-          padding: 2rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          min-height: 240px;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-          position: relative;
-        }
-
-        .c-win-card::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          border-radius: 24px;
-          background: radial-gradient(circle at 100% 0%, rgba(251, 191, 36, 0.06), transparent 60%);
-          pointer-events: none;
-        }
-
-        .c-win-card:hover {
-          transform: translateY(-6px);
-          border-color: rgba(251, 191, 36, 0.4);
-          box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.4),
-            0 0 25px rgba(251, 191, 36, 0.1);
-        }
-
-        .c-win-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 1.25rem;
-          margin-bottom: 0.75rem;
-        }
-
-        .c-win-title {
-          font-size: 1.3rem;
-          font-weight: 850;
-          color: #ffffff;
-          margin: 0;
-          line-height: 1.35;
-          letter-spacing: -0.01em;
-        }
-
-        .c-badge-win {
-          background: rgba(251, 191, 36, 0.12);
-          border: 1px solid rgba(251, 191, 36, 0.3);
-          color: #fbbf24;
-          padding: 0.3rem 0.75rem;
-          font-size: 0.7rem;
-          font-weight: 750;
-          border-radius: 99px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          flex-shrink: 0;
-        }
-
-        .c-win-desc {
-          font-size: 0.95rem;
-          color: var(--c-text-muted);
-          line-height: 1.5;
-          margin-bottom: 1.5rem;
-        }
-
-        .c-win-prize-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          margin-bottom: 1.5rem;
-        }
-
-        .c-win-prize-label {
-          font-size: 0.75rem;
-          color: var(--c-text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .c-win-prize-value {
-          font-size: 1.2rem;
-          font-weight: 900;
-          color: #fbbf24;
-        }
-
-        /* Sections */
-        .creator-section {
-          margin-bottom: 3.5rem;
-        }
-
-        .creator-section-title {
-          font-size: 1.5rem;
-          font-weight: 800;
-          color: #ffffff;
-          margin: 0 0 1.5rem;
-          letter-spacing: -0.015em;
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-        }
-
-        /* Grid */
-        .creator-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
-          gap: 2rem;
-        }
-
-        /* Available Campaigns Cards */
-        .c-campaign-card {
-          background: var(--c-surface);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid var(--c-border);
-          border-radius: 24px;
-          padding: 2rem;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          min-height: 310px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          position: relative;
-        }
-
-        .c-campaign-card::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          border-radius: 24px;
-          background: radial-gradient(circle at 100% 0%, rgba(139, 92, 246, 0.08), transparent 60%);
-          pointer-events: none;
-        }
-
-        .c-campaign-card:hover {
-          transform: translateY(-6px);
-          border-color: var(--c-border-hover);
-          box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.35),
-            0 0 25px rgba(124, 58, 237, 0.12);
-        }
-
-        .c-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 1.25rem;
-          margin-bottom: 1.1rem;
-        }
-
-        .c-card-title {
-          font-size: 1.3rem;
-          font-weight: 800;
-          color: #ffffff;
-          margin: 0;
-          line-height: 1.35;
-          letter-spacing: -0.015em;
-        }
-
-        .c-card-reward {
-          font-size: 1.2rem;
-          font-weight: 900;
-          color: #c084fc;
-          flex-shrink: 0;
-        }
-
-        .c-card-desc {
-          font-size: 0.95rem;
-          color: var(--c-text-muted);
-          line-height: 1.6;
-          margin-bottom: 1.75rem;
-          flex-grow: 1;
-        }
-
-        .c-card-meta {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-          padding-top: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          margin-bottom: 1.5rem;
-        }
-
-        .c-meta-item {
-          display: flex;
-          align-items: center;
-          gap: 0.6rem;
-          font-size: 0.88rem;
-          color: var(--c-text-muted);
-        }
-
-        .c-meta-item strong {
-          color: #f3f4f6;
-          font-weight: 600;
-        }
-
-        .c-card-actions {
-          display: flex;
-          gap: 1rem;
-          width: 100%;
-        }
-
-        /* Buttons styling */
-        .btn-neon-action {
-          flex: 1.25;
-          background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          color: #ffffff;
-          border: none;
-          border-radius: 14px;
-          padding: 0.85rem 1.5rem;
-          font-size: 0.9rem;
-          font-weight: 750;
-          cursor: pointer;
-          box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-          transition: all 0.25s ease;
-          text-align: center;
-        }
-
-        .btn-neon-action:hover {
-          transform: translateY(-2px);
-          box-shadow: 
-            0 8px 24px rgba(124, 58, 237, 0.5),
-            0 0 15px rgba(99, 102, 241, 0.3);
-        }
-
-        .badge-submitted-green {
-          flex: 1.25;
-          background: rgba(16, 185, 129, 0.12);
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          color: #34d399;
-          border-radius: 14px;
-          padding: 0.85rem;
-          font-size: 0.88rem;
-          font-weight: 750;
-          text-align: center;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .btn-ghost-action {
-          flex: 1;
-          background: rgba(255, 255, 255, 0.04);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 14px;
-          padding: 0.85rem 1.25rem;
-          font-size: 0.9rem;
-          font-weight: 650;
-          cursor: pointer;
-          transition: all 0.25s ease;
-          text-align: center;
-        }
-
-        .btn-ghost-action:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.25);
-          transform: translateY(-2px);
-        }
-
-        /* Glassmorphic Modals */
-        .c-modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(6, 4, 14, 0.88);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          display: grid;
-          place-items: center;
-          z-index: 1000;
-          padding: 1.5rem;
-          animation: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        .c-modal {
-          background: rgba(16, 12, 30, 0.98);
-          border: 1px solid var(--c-border);
-          box-shadow: 
-            0 30px 60px rgba(0, 0, 0, 0.6),
-            0 0 40px rgba(139, 92, 246, 0.2);
-          border-radius: 28px;
-          max-width: 550px;
-          width: 100%;
-          padding: 2.5rem;
-          position: relative;
-          animation: scale-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-        }
-
-        .c-modal-close {
-          position: absolute;
-          top: 1.25rem; right: 1.25rem;
-          background: rgba(255, 255, 255, 0.05) !important;
-          border: none !important;
-          width: 36px !important; height: 36px !important;
-          border-radius: 50% !important;
-          padding: 0 !important;
-          color: #ffffff !important;
-          display: grid !important;
-          place-items: center !important;
-          font-size: 1rem !important;
-          cursor: pointer !important;
-          transition: all 0.2s ease !important;
-        }
-
-        .c-modal-close:hover {
-          background: rgba(255, 255, 255, 0.15);
-          transform: rotate(90deg);
-        }
-
-        .c-modal-title {
-          font-size: 1.75rem;
-          font-weight: 850;
-          color: #ffffff;
-          margin: 0 0 1.5rem;
-          line-height: 1.3;
-          letter-spacing: -0.015em;
-        }
-
-        .c-modal-body {
-          font-size: 1.02rem;
-          line-height: 1.7;
-          color: #d1d5db;
-          margin-bottom: 2rem;
-          max-height: 250px;
-          overflow-y: auto;
-          padding-right: 0.5rem;
-        }
-
-        .c-modal-body::-webkit-scrollbar {
-          width: 6px;
-        }
-        .c-modal-body::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 99px;
-        }
-
-        .c-modal-meta-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1.25rem;
-          padding: 1.1rem;
-          background: rgba(255, 255, 255, 0.01);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          border-radius: 16px;
-          margin-bottom: 2rem;
-        }
-
-        .c-modal-meta-item h6 {
-          font-size: 0.68rem;
-          text-transform: uppercase;
-          color: var(--c-text-muted);
-          margin: 0 0 0.3rem;
-          letter-spacing: 0.05em;
-        }
-
-        .c-modal-meta-item p {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #ffffff;
-          margin: 0;
-        }
-
-        .c-modal-meta-item p.highlight {
-          color: #c084fc;
-        }
-
-        /* Glass Input inside Modal */
-        .c-input {
-          background: rgba(255, 255, 255, 0.02) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
-          border-radius: 14px !important;
-          padding: 0.9rem 1.1rem !important;
-          color: #ffffff !important;
-          font-size: 0.95rem !important;
-          width: 100% !important;
-          margin-bottom: 1rem !important;
-          transition: all 0.25s ease !important;
-        }
-
-        .c-input:focus {
-          border-color: #a855f7 !important;
-          box-shadow: 0 0 12px rgba(168, 85, 247, 0.2) !important;
-          outline: none !important;
-        }
-
-        /* Instruction Box */
-        .c-instruction-box {
-          margin-top: 1rem;
-          padding: 1.25rem;
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.005);
-        }
-
-        .c-instruction-box p {
-          margin: 0;
-          font-weight: 800;
-          color: #c084fc;
-          font-size: 0.92rem;
-          letter-spacing: 0.02em;
-          text-transform: uppercase;
-        }
-
-        .c-instruction-box ul {
-          margin: 0.75rem 0 0;
-          padding-left: 1.1rem;
-          font-size: 0.88rem;
-          color: var(--c-text-muted);
-          line-height: 1.6;
-        }
-
-        .c-instruction-box li {
-          margin-bottom: 0.35rem;
-        }
-
-        .c-fee-note {
-          font-size: 0.82rem;
-          color: var(--c-text-muted);
-          margin-top: 1rem;
-          font-style: italic;
-        }
-
-        /* Shimmer Loading */
-        .c-shimmer-card {
-          height: 290px;
-          border-radius: 20px;
-          background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
-          background-size: 200% 100%;
-          animation: loading-shimmer 1.4s infinite;
-        }
-
-        @keyframes loading-shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
-        /* Empty State */
-        .c-empty-state {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px dashed rgba(255, 255, 255, 0.1);
-          border-radius: 24px;
-          padding: 5rem 2rem;
-          text-align: center;
-          max-width: 550px;
-          margin: 4rem auto;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-          backdrop-filter: blur(10px);
-        }
-
-        .c-empty-icon {
-          font-size: 3.5rem;
-          margin-bottom: 1.25rem;
-          display: block;
-          animation: pulse-icon 2s infinite alternate ease-in-out;
-        }
-
-        @keyframes pulse-icon {
-          0% { transform: scale(1); opacity: 0.7; }
-          100% { transform: scale(1.08); opacity: 1; }
-        }
-
-        .c-empty-title {
-          font-size: 1.45rem;
-          font-weight: 750;
-          color: #ffffff;
-          margin: 0 0 0.5rem;
-        }
-
-        .c-empty-desc {
-          font-size: 0.95rem;
-          color: var(--c-text-muted);
-          margin: 0;
-        }
-      `}</style>
-
-      {/* Decorative Glow Blobs */}
-      <div className="c-ambient-glow glow-purple"></div>
-      <div className="c-ambient-glow glow-blue"></div>
-      <div className="c-ambient-glow glow-pink"></div>
-
-      <div className="c-container">
-        {/* HERO SECTION */}
-        <div className="c-hero">
-          <div className="c-hero-text">
-            <h2 className="c-hero-title">🎨 Creator Command Center</h2>
-            <p className="c-hero-subtitle">
-              Discover campaigns, showcase your creativity, and forge spectacular partnerships.
+    <div className="brand-dashboard-layout">
+      {showConfetti && <Confetti recycle={false} numberOfPieces={350} />}
+
+      {/* Ambient background lighting */}
+      <div className="ambient-glow glow-top-left"></div>
+      <div className="ambient-glow glow-bottom-right"></div>
+      <div className="ambient-mesh-pattern"></div>
+
+      <div className="dashboard-main-container">
+        {/* Welcome Banner */}
+        <div className="dashboard-welcome-banner">
+          <div className="welcome-text-group">
+            <div className="brand-role-chip" style={{ background: "rgba(139, 92, 246, 0.14)", borderColor: "rgba(139, 92, 246, 0.3)" }}>
+              <span>🎨 Creator Growth & Pitch Portal</span>
+            </div>
+            <h1>Welcome back, {user?.name || "Creator"} 👋</h1>
+            <p>
+              Discover active brand opportunities, pitch your creative video concepts, track submission statuses, and celebrate winning rewards.
             </p>
           </div>
-          
-          <div className="c-stats-grid">
-            <div className="c-stat-card">
-              <h4 className="c-stat-label">Total Wins</h4>
-              <span className="c-stat-value">{loading ? "-" : wins.length}</span>
-            </div>
-            <div className="c-stat-card">
-              <h4 className="c-stat-label">Open Campaigns</h4>
-              <span className="c-stat-value">
-                {loading ? "-" : campaigns.filter((c) => c && c._id).length}
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* CONGRATULATIONS BANNER */}
-        {!loading && wins.length > 0 && (
-          <div className="c-congrats-card">
-            <span className="c-congrats-icon-box">🏆</span>
-            <div className="c-congrats-info">
-              <h3>Achievements Unlocked!</h3>
-              <p>
-                Congratulations! You have secured <strong>{wins.length}</strong> brand campaign partnership{wins.length === 1 ? "" : "s"} so far. Keep showcasing your spectacular talent!
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* MY WINS SECTION */}
-        {!loading && wins.length > 0 && (
-          <div className="creator-section">
-            <h3 className="creator-section-title">🏆 My Wins & Earnings</h3>
-            <div className="creator-grid">
-              {wins.map((w) => (
-                <div className="c-win-card" key={w._id}>
-                  <div>
-                    <div className="c-win-header">
-                      <h3 className="c-win-title">{titleForWin(w, campaigns)}</h3>
-                      <span className="c-badge-win">Winner</span>
-                    </div>
-                    <p className="c-win-desc">🎉 Your content has been chosen by the brand!</p>
-                  </div>
-                  <div>
-                    {prizeForWin(w, campaigns) && (
-                      <div className="c-win-prize-row">
-                        <span className="c-win-prize-label">Payout Amount</span>
-                        <span className="c-win-prize-value">{prizeForWin(w, campaigns)}*</span>
-                      </div>
-                    )}
-                    <a
-                      href={w.contentUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="btn-view-submission"
-                    >
-                      View Winning Submission
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {wins.some((w) => prizeForWin(w, campaigns)) && (
-              <p className="c-fee-note">
-                * Note: A 5% platform fee will be automatically deducted upon withdrawal.
-              </p>
+          <div className="welcome-actions">
+            {wins.length > 0 ? (
+              <button
+                type="button"
+                className="create-campaign-btn"
+                style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)" }}
+                onClick={triggerCelebration}
+              >
+                <span>🏆 Celebrate Wins ({wins.length})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="create-campaign-btn"
+                onClick={() => setActiveFilter("open")}
+              >
+                <span>Browse Opportunities 🚀</span>
+              </button>
             )}
           </div>
+        </div>
+
+        {/* Quick Metrics Bar */}
+        <div className="metrics-dashboard-grid">
+          <div className="metric-stat-card stat-approved">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Open Opportunities</span>
+              <span className="metric-stat-badge badge-green">Live</span>
+            </div>
+            <div className="metric-stat-value">{openOpportunitiesCount}</div>
+            <div className="metric-stat-footer">
+              <span>Ready for your pitch</span>
+            </div>
+          </div>
+
+          <div className="metric-stat-card">
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Pitches Submitted</span>
+              <span className="metric-stat-badge">Total</span>
+            </div>
+            <div className="metric-stat-value">{mySubmissions.length}</div>
+            <div className="metric-stat-footer">
+              <span>Collaborations in pipeline</span>
+            </div>
+          </div>
+
+          <div className="metric-stat-card stat-pending" style={{ borderColor: wins.length > 0 ? "#fbbf24" : undefined }}>
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Crowned Wins</span>
+              <span className="metric-stat-badge badge-amber">🏆 Wins</span>
+            </div>
+            <div className="metric-stat-value" style={{ color: wins.length > 0 ? "#b45309" : undefined }}>
+              {wins.length}
+            </div>
+            <div className="metric-stat-footer">
+              <span>Winning campaigns awarded</span>
+            </div>
+          </div>
+
+          <div className="metric-stat-card stat-action" style={{ background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(245, 158, 11, 0.08))" }}>
+            <div className="metric-stat-header">
+              <span className="metric-stat-label">Total Earnings</span>
+              <span className="metric-stat-badge">💎 Rewards</span>
+            </div>
+            <div className="metric-stat-value" style={{ fontSize: "1.5rem", color: "var(--purple-dark)" }}>
+              {totalEarningsWon}
+            </div>
+            <div className="metric-stat-footer">
+              <span>All-time creator payouts</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Wins Spotlight Banner if creator has wins */}
+        {wins.length > 0 && (
+          <div className="winner-spotlight-card" style={{ marginBottom: "1.5rem" }}>
+            <div className="spotlight-left">
+              <div className="trophy-badge">🏆</div>
+              <div>
+                <span className="winner-tag">⭐ Top Creator Accolade</span>
+                <h2 className="winner-creator-name">You have won {wins.length} brand campaign{wins.length > 1 ? "s" : ""}!</h2>
+                <p className="winner-subtitle">
+                  Total awarded earnings: <strong>{totalEarningsWon}</strong>. Keep pitching high quality content to win more campaigns!
+                </p>
+              </div>
+            </div>
+            <div className="spotlight-actions">
+              <button
+                type="button"
+                className="celebrate-btn"
+                onClick={triggerCelebration}
+              >
+                🎉 Confetti Burst
+              </button>
+            </div>
+          </div>
         )}
 
-        {/* AVAILABLE CAMPAIGNS */}
-        <div className="creator-section">
-          <h3 className="creator-section-title">📢 Latest Campaign Briefs</h3>
-          
-          {loading ? (
-            <div className="creator-grid">
-              <div className="c-shimmer-card"></div>
-              <div className="c-shimmer-card"></div>
-              <div className="c-shimmer-card"></div>
-            </div>
-          ) : campaigns.length === 0 ? (
-            <div className="c-empty-state">
-              <span className="c-empty-icon">📂</span>
-              <h3 className="c-empty-title">No Briefs Available</h3>
-              <p className="c-empty-desc">Check back later for active campaign briefs!</p>
-            </div>
-          ) : (
-            <div className="creator-grid">
-              {campaigns
-                .filter((c) => c && c._id)
-                .map((c) => {
-                  const submitted = hasSubmitted(c._id);
+        {/* Campaign Explorer Header & Filter Tabs */}
+        <div className="campaigns-explorer-header">
+          <div className="explorer-title-group">
+            <h2>Brand Campaigns</h2>
+            <span className="count-pill">{filteredCampaigns.length}</span>
+          </div>
 
-                  return (
-                    <div className="c-campaign-card" key={c._id}>
-                      <div>
-                        <div className="c-card-header">
-                          <h3 className="c-card-title">{c.title || "Untitled Campaign"}</h3>
-                          {c.reward && <span className="c-card-reward">{c.reward}</span>}
-                        </div>
-                        <p className="c-card-desc">
-                          {shortDescription(c.description)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <div className="c-card-meta">
-                          {c.deadline && (
-                            <div className="c-meta-item">
-                              <span>📅</span>
-                              <span>Deadline: <strong>{formatDeadline(c.deadline)}</strong></span>
-                            </div>
-                          )}
-                          <div className="c-meta-item">
-                            <span>⚡</span>
-                            <span>Status: <strong>{submitted ? "Submitted" : "Open for Pitching"}</strong></span>
-                          </div>
-                        </div>
-
-                        <div className="c-card-actions">
-                          {submitted ? (
-                            <span className="badge-submitted-green">Submitted</span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-neon-action"
-                              onClick={() => setSelectedCampaign(c)}
-                            >
-                              Submit Content
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="btn-ghost-action"
-                            onClick={() => setViewCampaign(c)}
-                          >
-                            Brief
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+          <div className="explorer-controls">
+            {/* Search Bar */}
+            <div className="search-input-box">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search campaigns, brands, rewards..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-          )}
+
+            {/* Filter Tabs */}
+            <div className="filter-pill-group">
+              <button
+                type="button"
+                className={`filter-pill ${activeFilter === "all" ? "active" : ""}`}
+                onClick={() => setActiveFilter("all")}
+              >
+                All Opportunities
+              </button>
+              <button
+                type="button"
+                className={`filter-pill ${activeFilter === "open" ? "active" : ""}`}
+                onClick={() => setActiveFilter("open")}
+              >
+                Open to Pitch ({openOpportunitiesCount})
+              </button>
+              <button
+                type="button"
+                className={`filter-pill ${activeFilter === "submitted" ? "active" : ""}`}
+                onClick={() => setActiveFilter("submitted")}
+              >
+                My Pitches ({mySubmissions.length})
+              </button>
+              {wins.length > 0 && (
+                <button
+                  type="button"
+                  className={`filter-pill ${activeFilter === "wins" ? "active" : ""}`}
+                  onClick={() => setActiveFilter("wins")}
+                >
+                  🏆 Won ({wins.length})
+                </button>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Campaigns Grid */}
+        {loading ? (
+          <div className="empty-campaigns-box">
+            <span className="btn-spinner" style={{ width: "32px", height: "32px", borderColor: "rgba(139,92,246,0.3)", borderTopColor: "var(--purple)", margin: "0 auto 1rem auto" }}></span>
+            <h3>Loading available campaigns...</h3>
+          </div>
+        ) : filteredCampaigns.length === 0 ? (
+          <div className="empty-campaigns-box">
+            <div className="empty-icon">🎨</div>
+            <h3>No campaigns found</h3>
+            <p>
+              {searchQuery || activeFilter !== "all"
+                ? "Try clearing your search query or switching to another filter."
+                : "There are currently no active campaigns open. Check back soon for new opportunities!"}
+            </p>
+            {(searchQuery || activeFilter !== "all") && (
+              <button
+                type="button"
+                className="create-campaign-btn"
+                style={{ marginTop: "1rem" }}
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveFilter("all");
+                }}
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="brand-campaigns-grid">
+            {filteredCampaigns.map((c) => {
+              const won = hasWon(c._id);
+              const submitted = hasSubmitted(c._id);
+              const submissionObj = getSubmissionForCampaign(c._id);
+
+              return (
+                <div
+                  className={`brand-campaign-card ${won ? "card-winner-highlight" : ""}`}
+                  key={c._id}
+                >
+                  <div className="card-top-row">
+                    {won ? (
+                      <span className="status-chip" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#b45309", border: "1px solid rgba(245, 158, 11, 0.35)" }}>
+                        <span>🏆</span> Winner Crowned
+                      </span>
+                    ) : submitted ? (
+                      <span className="status-chip chip-approved" style={{ background: "rgba(139, 92, 246, 0.12)", color: "var(--purple-dark)", borderColor: "rgba(139, 92, 246, 0.25)" }}>
+                        <span className="status-dot"></span> Pitch Submitted
+                      </span>
+                    ) : (
+                      <span className="status-chip chip-approved">
+                        <span className="status-dot"></span> Open for Pitches
+                      </span>
+                    )}
+
+                    {c.deadline && (
+                      <div className="deadline-tag">
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                          <line x1="16" x2="16" y1="2" y2="6" />
+                          <line x1="8" x2="8" y1="2" y2="6" />
+                          <line x1="3" x2="21" y1="10" y2="10" />
+                        </svg>
+                        <span>{formatDeadline(c.deadline)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="campaign-card-title">{c.title}</h3>
+                  <p className="campaign-card-desc">{c.description}</p>
+
+                  <div className="card-bottom-bar">
+                    <div className="reward-badge-group">
+                      <span className="reward-label">Reward Pool</span>
+                      <span className="reward-amount">{c.reward || "₹0"}</span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      <button
+                        type="button"
+                        className="back-nav-btn"
+                        style={{ padding: "0.48rem 0.85rem", fontSize: "0.82rem" }}
+                        onClick={() => setViewCampaign(c)}
+                      >
+                        Brief 📋
+                      </button>
+
+                      {submitted ? (
+                        submissionObj?.contentUrl ? (
+                          <a
+                            href={submissionObj.contentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="manage-submissions-btn"
+                            style={{ padding: "0.48rem 0.85rem", fontSize: "0.82rem", background: "linear-gradient(135deg, #10b981, #059669)" }}
+                          >
+                            <span>View Link ↗</span>
+                          </a>
+                        ) : (
+                          <span
+                            className="status-chip chip-approved"
+                            style={{ padding: "0.48rem 0.75rem" }}
+                          >
+                            ✓ Sent
+                          </span>
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          className="manage-submissions-btn"
+                          style={{ padding: "0.48rem 0.95rem", fontSize: "0.82rem" }}
+                          onClick={() => setSelectedCampaign(c)}
+                        >
+                          <span>Pitch 🚀</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* SUBMIT MODAL */}
-      {selectedCampaign && (
-        <div className="c-modal-overlay" onClick={closeModal}>
-          <div className="c-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="c-modal-close" onClick={closeModal}>
-              ✕
-            </button>
+      {/* CAMPAIGN BRIEF INSPECTOR MODAL */}
+      {viewCampaign && (
+        <div
+          className="create-modal-backdrop"
+          onClick={() => setViewCampaign(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="create-modal-card"
+            style={{ maxWidth: "560px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-top-bar">
+              <div className="modal-title-group">
+                <span className="modal-badge">Campaign Brief</span>
+                <h2>{viewCampaign.title || "Campaign Guidelines"}</h2>
+              </div>
+              <button
+                type="button"
+                className="modal-close-button"
+                onClick={() => setViewCampaign(null)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
 
-            <h3 className="c-modal-title">Submit Pitch: {selectedCampaign.title}</h3>
+            <div className="modal-field modal-full-span" style={{ marginTop: "0.5rem" }}>
+              <label style={{ fontSize: "0.82rem", color: "var(--purple-dark)", fontWeight: 700 }}>
+                CAMPAIGN OBJECTIVE & BRIEF
+              </label>
+              <div style={{
+                background: "#f8fafc",
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "1rem 1.1rem",
+                fontSize: "0.92rem",
+                lineHeight: "1.6",
+                color: "var(--text)",
+                whiteSpace: "pre-line",
+                maxHeight: "220px",
+                overflowY: "auto"
+              }}>
+                {viewCampaign.description || "No description provided by the brand."}
+              </div>
+            </div>
 
-            <form onSubmit={submitContent}>
-              <input
-                type="url"
-                className="c-input"
-                placeholder="Paste public Drive or Media link"
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                required
-              />
-
-              <div className="c-instruction-box">
-                <p>Submission Guidelines</p>
-                <ul>
-                  <li>Video quality should be at least 1080p (Full HD).</li>
-                  <li>Keep video stable, well-focused, and properly lit.</li>
-                  <li>Clear audio track with minimal background noise.</li>
-                  <li>Ensure content matches the brief requirements.</li>
-                  <li>Confirm drive link access is set to public.</li>
-                </ul>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
+              <div style={{ background: "rgba(139, 92, 246, 0.08)", border: "1px solid rgba(139, 92, 246, 0.18)", borderRadius: "12px", padding: "0.85rem 1rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--purple-dark)", textTransform: "uppercase" }}>
+                  REWARD POOL
+                </span>
+                <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--purple-dark)", marginTop: "0.2rem" }}>
+                  {viewCampaign.reward || "₹0"}
+                </div>
               </div>
 
-              <button type="submit" className="btn-neon-action" style={{ marginTop: "1.5rem", width: "100%" }}>
-                Submit Pitch
+              <div style={{ background: "#f8fafc", border: "1px solid var(--border)", borderRadius: "12px", padding: "0.85rem 1rem" }}>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-light)", textTransform: "uppercase" }}>
+                  SUBMISSION DEADLINE
+                </span>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--text)", marginTop: "0.2rem" }}>
+                  {formatDeadline(viewCampaign.deadline)}
+                </div>
+              </div>
+            </div>
+
+            <div className="instruction-box" style={{ marginTop: "1.2rem", borderRadius: "12px" }}>
+              <strong style={{ color: "var(--purple-dark)", fontSize: "0.85rem" }}>
+                Deliverable Guidelines:
+              </strong>
+              <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.2rem", fontSize: "0.82rem" }}>
+                <li>Minimum 1080p Full HD resolution video.</li>
+                <li>Clear lighting and clean audio with minimal noise.</li>
+                <li>Ensure public link sharing permissions are enabled.</li>
+              </ul>
+            </div>
+
+            <div className="modal-action-bar" style={{ marginTop: "1.4rem" }}>
+              <button
+                type="button"
+                className="modal-cancel-btn"
+                onClick={() => setViewCampaign(null)}
+              >
+                Close Brief
               </button>
-            </form>
+
+              {!hasSubmitted(viewCampaign._id) && (
+                <button
+                  type="button"
+                  className="modal-submit-btn"
+                  onClick={() => {
+                    const c = viewCampaign;
+                    setViewCampaign(null);
+                    setSelectedCampaign(c);
+                  }}
+                >
+                  <span>Submit Pitch Now 🚀</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* CAMPAIGN BRIEF DETAILS MODAL */}
-      {viewCampaign && (
+      {/* SUBMIT PITCH MODAL */}
+      {selectedCampaign && (
         <div
-          className="c-modal-overlay"
-          onClick={() => setViewCampaign(null)}
+          className="create-modal-backdrop"
+          onClick={() => !isSubmittingPitch && closeModal()}
+          role="dialog"
+          aria-modal="true"
         >
           <div
-            className="c-modal"
+            className="create-modal-card"
+            style={{ maxWidth: "520px" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              className="c-modal-close"
-              onClick={() => setViewCampaign(null)}
-            >
-              ✕
-            </button>
-
-            <h3 className="c-modal-title">{viewCampaign.title || "Untitled Brief"}</h3>
-
-            <div className="c-modal-body">
-              {viewCampaign.description || "No description available."}
-            </div>
-
-            <div className="c-modal-meta-grid">
-              <div className="c-modal-meta-item">
-                <h6>Reward Amount</h6>
-                <p className="highlight">{viewCampaign.reward || "Not specified"}</p>
+            <div className="modal-top-bar">
+              <div className="modal-title-group">
+                <span className="modal-badge">Pitch Submission</span>
+                <h2>Submit Pitch for {selectedCampaign.title}</h2>
               </div>
-              <div className="c-modal-meta-item">
-                <h6>Deadline</h6>
-                <p>{formatDeadline(viewCampaign.deadline)}</p>
-              </div>
-            </div>
-
-            <div className="c-instruction-box" style={{ marginBottom: "1.5rem" }}>
-              <p>Submission Requirements</p>
-              <ul>
-                <li>1080p (Full HD) minimum quality.</li>
-                <li>Clear, well-focused audio and footage.</li>
-                <li>Alignment with brief and brand tone.</li>
-                <li>Public access for link verification.</li>
-              </ul>
-            </div>
-
-            <div className="c-card-actions">
-              <button 
-                type="button" 
-                className="btn-ghost-action" 
-                onClick={() => setViewCampaign(null)}
-                style={{ flex: 1 }}
+              <button
+                type="button"
+                className="modal-close-button"
+                onClick={() => !isSubmittingPitch && closeModal()}
+                aria-label="Close modal"
               >
-                Close Brief
+                ✕
               </button>
-              {!hasSubmitted(viewCampaign._id) && (
-                <button 
-                  type="button" 
-                  className="btn-neon-action" 
-                  onClick={() => {
-                    setViewCampaign(null);
-                    setSelectedCampaign(viewCampaign);
-                  }}
-                  style={{ flex: 1.25 }}
-                >
-                  Submit Pitch Now
-                </button>
-              )}
             </div>
+
+            <form className="modal-form" onSubmit={submitContent} noValidate>
+              <div className="modal-field modal-full-span">
+                <label htmlFor="pitch-url-input">Public Media / Google Drive URL</label>
+                <input
+                  id="pitch-url-input"
+                  type="url"
+                  placeholder="e.g. https://drive.google.com/file/d/... or YouTube link"
+                  value={contentUrl}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  onBlur={() => {
+                    setTouchedUrl(true);
+                    setUrlError(validateUrl(contentUrl));
+                  }}
+                  className={touchedUrl && urlError ? "input-has-error" : ""}
+                  autoFocus
+                />
+
+                {touchedUrl && urlError && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{urlError}</span>
+                  </div>
+                )}
+
+                {!urlError && contentUrl && detectPlatformBadge(contentUrl) && (
+                  <div className="url-preview-badge">
+                    <span>{detectPlatformBadge(contentUrl)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="instruction-box" style={{ marginTop: "1rem", borderRadius: "12px" }}>
+                <strong style={{ color: "var(--purple-dark)", fontSize: "0.85rem" }}>
+                  Before Submitting:
+                </strong>
+                <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.2rem", fontSize: "0.82rem" }}>
+                  <li>Video quality should be at least 1080p (Full HD).</li>
+                  <li>Confirm Drive / Media link access is set to <strong>Anyone with link can view</strong>.</li>
+                  <li>Ensure deliverable aligns with brand brief criteria.</li>
+                </ul>
+              </div>
+
+              <div className="modal-action-bar" style={{ marginTop: "1.4rem" }}>
+                <button
+                  type="button"
+                  className="modal-cancel-btn"
+                  onClick={closeModal}
+                  disabled={isSubmittingPitch}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="modal-submit-btn"
+                  disabled={isSubmittingPitch}
+                >
+                  {isSubmittingPitch ? (
+                    <div className="btn-spinner-row">
+                      <span className="btn-spinner"></span>
+                      <span>Submitting Pitch...</span>
+                    </div>
+                  ) : (
+                    <span>Submit Pitch 🚀</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

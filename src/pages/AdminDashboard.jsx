@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { toast } from "react-toastify";
-import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
 
   const [pendingCampaigns, setPendingCampaigns] = useState([]);
   const [allCampaigns, setAllCampaigns] = useState([]);
@@ -255,14 +253,16 @@ const AdminDashboard = () => {
                 className={`filter-pill ${activeTab === "pending" ? "active" : ""}`}
                 onClick={() => setActiveTab("pending")}
               >
-                Pending Queue ({pendingCount})
+                <span>Pending Queue</span>
+                <span className="pill-badge">{pendingCount}</span>
               </button>
               <button
                 type="button"
                 className={`filter-pill ${activeTab === "all" ? "active" : ""}`}
                 onClick={() => setActiveTab("all")}
               >
-                All Campaigns ({totalCampaignsCount})
+                <span>All Campaigns</span>
+                <span className="pill-badge">{totalCampaignsCount}</span>
               </button>
             </div>
           </div>

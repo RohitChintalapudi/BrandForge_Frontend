@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import Confetti from "react-confetti";
 import { useAuth } from "../context/AuthContext";
 
@@ -13,6 +13,8 @@ const BrandDashboard = () => {
     reward: "",
     deadline: "",
   });
+  const [touched, setTouched] = useState({});
+  const [errors, setErrors] = useState({});
 
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
@@ -24,6 +26,8 @@ const BrandDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const minDeadlineDate = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
   const fetchCampaigns = async () => {
     try {
@@ -38,15 +42,107 @@ const BrandDashboard = () => {
     fetchCampaigns();
   }, []);
 
+  const validateField = (name, value) => {
+    let errorMsg = "";
+    if (name === "title") {
+      const trimmed = (value || "").trim();
+      if (!trimmed) {
+        errorMsg = "Campaign title is required.";
+      } else if (trimmed.length < 5) {
+        errorMsg = "Title must be at least 5 characters long.";
+      } else if (trimmed.length > 100) {
+        errorMsg = "Title cannot exceed 100 characters.";
+      }
+    } else if (name === "reward") {
+      const trimmed = (value || "").toString().trim();
+      const numericVal = parseInt(trimmed.replace(/[^0-9]/g, ""), 10);
+      if (!trimmed) {
+        errorMsg = "Reward pool amount is required.";
+      } else if (isNaN(numericVal) || numericVal < 500) {
+        errorMsg = "Minimum reward budget is ₹500 (e.g. ₹5,000).";
+      }
+    } else if (name === "deadline") {
+      if (!value) {
+        errorMsg = "Submission deadline is required.";
+      } else {
+        const selectedDate = new Date(value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (isNaN(selectedDate.getTime()) || selectedDate <= today) {
+          errorMsg = "Deadline must be a future date (tomorrow or later).";
+        }
+      }
+    } else if (name === "description") {
+      const trimmed = (value || "").trim();
+      if (!trimmed) {
+        errorMsg = "Campaign description is required.";
+      } else if (trimmed.length < 20) {
+        errorMsg = "Description must be at least 20 characters detailing the brief.";
+      } else if (trimmed.length > 2000) {
+        errorMsg = "Description cannot exceed 2000 characters.";
+      }
+    }
+    return errorMsg;
+  };
+
+  const handleFormFieldChange = (field, value) => {
+    const updated = { ...form, [field]: value };
+    setForm(updated);
+    if (touched[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: validateField(field, value, updated),
+      }));
+    }
+  };
+
+  const handleFieldBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({
+      ...prev,
+      [field]: validateField(field, form[field], form),
+    }));
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (isCreating) return;
 
+    const titleErr = validateField("title", form.title);
+    const rewardErr = validateField("reward", form.reward);
+    const deadlineErr = validateField("deadline", form.deadline);
+    const descErr = validateField("description", form.description);
+
+    setTouched({
+      title: true,
+      reward: true,
+      deadline: true,
+      description: true,
+    });
+    setErrors({
+      title: titleErr,
+      reward: rewardErr,
+      deadline: deadlineErr,
+      description: descErr,
+    });
+
+    if (titleErr || rewardErr || deadlineErr || descErr) {
+      toast.error("Please fill in all campaign fields correctly.");
+      return;
+    }
+
     setIsCreating(true);
     try {
-      await api.post("/api/campaigns", form);
+      await api.post("/api/campaigns", {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        reward: form.reward.trim(),
+        deadline: form.deadline,
+      });
       toast.success("Campaign created successfully! (Pending admin review) 🚀");
       setForm({ title: "", description: "", reward: "", deadline: "" });
+      setTouched({});
+      setErrors({});
       setShowCreateModal(false);
       fetchCampaigns();
     } catch (err) {
@@ -577,7 +673,7 @@ const BrandDashboard = () => {
               </button>
             </div>
 
-            <form className="modal-form" onSubmit={handleCreate}>
+            <form className="modal-form" onSubmit={handleCreate} noValidate>
               <div className="modal-form-grid">
                 {/* Title */}
                 <div className="modal-field">
@@ -586,9 +682,20 @@ const BrandDashboard = () => {
                     id="modal-campaign-title"
                     placeholder="e.g. Summer Fitness Reel Showcase"
                     value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    required
+                    onChange={(e) => handleFormFieldChange("title", e.target.value)}
+                    onBlur={() => handleFieldBlur("title")}
+                    className={touched.title && errors.title ? "input-has-error" : ""}
                   />
+                  {touched.title && errors.title && (
+                    <div className="form-error-msg">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{errors.title}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Reward */}
@@ -598,9 +705,20 @@ const BrandDashboard = () => {
                     id="modal-campaign-reward"
                     placeholder="e.g. ₹15,000"
                     value={form.reward}
-                    onChange={(e) => setForm({ ...form, reward: e.target.value })}
-                    required
+                    onChange={(e) => handleFormFieldChange("reward", e.target.value)}
+                    onBlur={() => handleFieldBlur("reward")}
+                    className={touched.reward && errors.reward ? "input-has-error" : ""}
                   />
+                  {touched.reward && errors.reward && (
+                    <div className="form-error-msg">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{errors.reward}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Deadline */}
@@ -609,10 +727,22 @@ const BrandDashboard = () => {
                   <input
                     id="modal-campaign-deadline"
                     type="date"
+                    min={minDeadlineDate}
                     value={form.deadline}
-                    onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                    required
+                    onChange={(e) => handleFormFieldChange("deadline", e.target.value)}
+                    onBlur={() => handleFieldBlur("deadline")}
+                    className={touched.deadline && errors.deadline ? "input-has-error" : ""}
                   />
+                  {touched.deadline && errors.deadline && (
+                    <div className="form-error-msg">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{errors.deadline}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -649,14 +779,28 @@ const BrandDashboard = () => {
 
                   <textarea
                     id="modal-campaign-desc"
-                    placeholder="Describe your goals, brand talking points, guidelines, and what you're looking for..."
+                    placeholder="Describe your goals, brand talking points, guidelines, and what you're looking for (min 20 characters)..."
                     value={form.description}
-                    onChange={(e) =>
-                      setForm({ ...form, description: e.target.value })
-                    }
+                    onChange={(e) => handleFormFieldChange("description", e.target.value)}
+                    onBlur={() => handleFieldBlur("description")}
+                    className={touched.description && errors.description ? "input-has-error" : ""}
                     rows="4"
-                    required
                   />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.25rem" }}>
+                    {touched.description && errors.description ? (
+                      <div className="form-error-msg" style={{ marginTop: 0 }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <span>{errors.description}</span>
+                      </div>
+                    ) : <span />}
+                    <span className={`char-counter ${form.description.length > 1900 ? "limit-near" : ""}`}>
+                      {form.description.length}/2000 characters
+                    </span>
+                  </div>
                 </div>
               </div>
 
