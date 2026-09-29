@@ -181,22 +181,36 @@ const Register = () => {
       <div className="ambient-mesh-pattern"></div>
 
       <div className="login-card-container register-container">
-        {/* Left Side: Brand & Onboarding Showcase */}
+        {/* Left Side: Dynamic Brand & Onboarding Showcase */}
         <div className="login-showcase-panel register-showcase-panel">
           <div className="showcase-content">
             <div className="showcase-badge">
-              <span className="badge-sparkle">🚀</span>
-              <span>Join 10,000+ Brands & Creators</span>
+              <span className="badge-sparkle">{form.role === "creator" ? "🎨" : "🏢"}</span>
+              <span>
+                {form.role === "creator"
+                  ? "Join 10,000+ Creators & Influencers"
+                  : "Join 5,000+ Verified Brands & Agencies"}
+              </span>
             </div>
 
             <h1 className="showcase-title">
-              Start forging <br />
-              <span className="gradient-text">lucrative partnerships.</span>
+              {form.role === "creator" ? (
+                <>
+                  Monetize creativity, <br />
+                  <span className="gradient-text">amplify your reach.</span>
+                </>
+              ) : (
+                <>
+                  Launch high-impact <br />
+                  <span className="gradient-text">creator campaigns.</span>
+                </>
+              )}
             </h1>
 
             <p className="showcase-description">
-              Create an account today to access verified brand campaigns,
-              collaborate seamlessly, and get guaranteed payouts.
+              {form.role === "creator"
+                ? "Access verified brand campaigns, pitch high-impact video reels, and earn guaranteed prize pool payouts."
+                : "Publish custom creator briefs, review curated video submissions, and award top talent with 1-click escrow."}
             </p>
 
             {/* Dynamic Role Highlight Card */}
@@ -213,20 +227,39 @@ const Register = () => {
               </p>
             </div>
 
-            {/* Step-by-Step Benefit List */}
+            {/* Dynamic Step-by-Step Benefit List */}
             <div className="benefits-checklist">
-              <div className="benefit-item">
-                <div className="benefit-bullet">✓</div>
-                <span>Free instant account setup with zero hidden fees</span>
-              </div>
-              <div className="benefit-item">
-                <div className="benefit-bullet">✓</div>
-                <span>Role-tailored dashboard & campaign management</span>
-              </div>
-              <div className="benefit-item">
-                <div className="benefit-bullet">✓</div>
-                <span>Secure escrow & guaranteed on-time approvals</span>
-              </div>
+              {form.role === "creator" ? (
+                <>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>Zero submission fees — pitch directly to verified brands</span>
+                  </div>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>Guaranteed on-time approvals & secure escrow payouts</span>
+                  </div>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>Build your verified creator reputation & portfolio</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>Launch custom creator campaigns in minutes</span>
+                  </div>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>Curate, moderate, and inspect creator video pitches</span>
+                  </div>
+                  <div className="benefit-item">
+                    <div className="benefit-bullet">✓</div>
+                    <span>1-click winner selection with guaranteed escrow safety</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -238,8 +271,16 @@ const Register = () => {
               <div className="brand-logo-pill">
                 <span className="logo-name">BrandForge</span>
               </div>
-              <h2>Create Account</h2>
-              <p>Get started with your free BrandForge account</p>
+              <h2>
+                {form.role === "creator"
+                  ? "Create Creator Account"
+                  : "Create Brand Account"}
+              </h2>
+              <p>
+                {form.role === "creator"
+                  ? "Start pitching to brand briefs & winning reward pools"
+                  : "Launch campaigns & discover top creative talent"}
+              </p>
             </div>
 
             {/* Role Selection Radio Cards */}
@@ -279,9 +320,11 @@ const Register = () => {
             </div>
 
             <form className="interactive-form" onSubmit={handleSubmit} noValidate>
-              {/* Full Name */}
+              {/* Full Name / Brand Name */}
               <div className="input-field-group">
-                <label htmlFor="register-name">Full Name</label>
+                <label htmlFor="register-name">
+                  {form.role === "creator" ? "Creator Full Name" : "Company / Brand Name"}
+                </label>
                 <div className="input-with-icon">
                   <span className="input-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -292,7 +335,11 @@ const Register = () => {
                   <input
                     id="register-name"
                     type="text"
-                    placeholder="e.g. Samantha Vance"
+                    placeholder={
+                      form.role === "creator"
+                        ? "e.g. Samantha Vance"
+                        : "e.g. Acme Media Corp"
+                    }
                     value={form.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     onBlur={() => handleBlur("name")}
@@ -314,7 +361,9 @@ const Register = () => {
 
               {/* Email */}
               <div className="input-field-group">
-                <label htmlFor="register-email">Work or Personal Email</label>
+                <label htmlFor="register-email">
+                  {form.role === "creator" ? "Creator Email Address" : "Company / Work Email"}
+                </label>
                 <div className="input-with-icon">
                   <span className="input-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -325,7 +374,11 @@ const Register = () => {
                   <input
                     id="register-email"
                     type="email"
-                    placeholder="name@domain.com"
+                    placeholder={
+                      form.role === "creator"
+                        ? "creator@domain.com"
+                        : "partner@brandforge.io"
+                    }
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     onBlur={() => handleBlur("email")}
@@ -504,11 +557,19 @@ const Register = () => {
                 {isSubmitting ? (
                   <div className="button-spinner-row">
                     <span className="btn-spinner"></span>
-                    <span>Creating Account...</span>
+                    <span>
+                      {form.role === "creator"
+                        ? "Creating Creator Account..."
+                        : "Creating Brand Account..."}
+                    </span>
                   </div>
                 ) : (
                   <div className="button-label-row">
-                    <span>Create Free Account</span>
+                    <span>
+                      {form.role === "creator"
+                        ? "Join as Creator 🚀"
+                        : "Join as Brand 🏢"}
+                    </span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14" />
                       <path d="m12 5 7 7-7 7" />
