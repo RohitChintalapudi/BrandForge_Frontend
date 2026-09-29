@@ -253,14 +253,16 @@ const AdminDashboard = () => {
                 className={`filter-pill ${activeTab === "pending" ? "active" : ""}`}
                 onClick={() => setActiveTab("pending")}
               >
-                Pending Queue ({pendingCount})
+                <span>Pending Queue</span>
+                <span className="pill-badge">{pendingCount}</span>
               </button>
               <button
                 type="button"
                 className={`filter-pill ${activeTab === "all" ? "active" : ""}`}
                 onClick={() => setActiveTab("all")}
               >
-                All Campaigns ({totalCampaignsCount})
+                <span>All Campaigns</span>
+                <span className="pill-badge">{totalCampaignsCount}</span>
               </button>
             </div>
           </div>
