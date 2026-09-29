@@ -3584,5 +3584,104 @@ textarea {
   }
 }
 
+/* =====================================================
+   UNIVERSAL FORM VALIDATION & FEEDBACK STYLES
+===================================================== */
+.input-has-error,
+input.input-has-error,
+textarea.input-has-error,
+.c-input.input-has-error {
+  border-color: #ef4444 !important;
+  background-color: #fffafb !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.creator-dashboard-root .input-has-error,
+.creator-dashboard-root .c-input.input-has-error {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22) !important;
+}
+
+.form-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #ef4444;
+  animation: formErrorShake 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.form-error-msg svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.form-success-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: #10b981;
+}
+
+.form-success-msg svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.char-counter {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.char-counter.limit-near {
+  color: #f59e0b;
+}
+
+.char-counter.limit-reached {
+  color: #ef4444;
+}
+
+.url-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.32rem 0.75rem;
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  border-radius: 7px;
+  font-size: 0.78rem;
+  color: #c084fc;
+  font-weight: 600;
+  animation: badgePopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes formErrorShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+@keyframes badgePopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
 
 

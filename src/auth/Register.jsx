@@ -8,11 +8,15 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     role: "creator",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [touched, setTouched] = useState({});
+  const [errors, setErrors] = useState({});
 
   const navigate = useNavigate();
 
@@ -41,30 +45,129 @@ const Register = () => {
 
   const strength = getPasswordStrength(form.password);
 
+  const validateField = (name, value, currentForm = form) => {
+    let errorMsg = "";
+    if (name === "name") {
+      const trimmed = (value || "").trim();
+      if (!trimmed) {
+        errorMsg = "Full name is required.";
+      } else if (trimmed.length < 2) {
+        errorMsg = "Name must be at least 2 characters.";
+      } else if (trimmed.length > 50) {
+        errorMsg = "Name cannot exceed 50 characters.";
+      } else if (!/^[a-zA-Z\s.'-]+$/.test(trimmed)) {
+        errorMsg = "Name can only contain letters, spaces, hyphens, and dots.";
+      }
+    } else if (name === "email") {
+      const trimmed = (value || "").trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!trimmed) {
+        errorMsg = "Email address is required.";
+      } else if (!emailRegex.test(trimmed)) {
+        errorMsg = "Please enter a valid email address.";
+      }
+    } else if (name === "password") {
+      if (!value) {
+        errorMsg = "Password is required.";
+      } else if (value.length < 6) {
+        errorMsg = "Password must be at least 6 characters long.";
+      } else if (!/(?=.*[a-zA-Z])(?=.*[0-9]|.*[^A-Za-z0-9])/.test(value)) {
+        errorMsg = "Include both letters and numbers/symbols for security.";
+      }
+    } else if (name === "confirmPassword") {
+      if (!value) {
+        errorMsg = "Please confirm your password.";
+      } else if (value !== currentForm.password) {
+        errorMsg = "Passwords do not match.";
+      }
+    }
+    return errorMsg;
+  };
+
+  const handleChange = (field, value) => {
+    const updatedForm = { ...form, [field]: value };
+    setForm(updatedForm);
+
+    if (touched[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: validateField(field, value, updatedForm),
+      }));
+    }
+
+    // If changing password, also revalidate confirmPassword if touched
+    if (field === "password" && touched.confirmPassword) {
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: validateField(
+          "confirmPassword",
+          updatedForm.confirmPassword,
+          updatedForm
+        ),
+      }));
+    }
+  };
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    setErrors((prev) => ({
+      ...prev,
+      [field]: validateField(field, form[field], form),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (!agreeTerms) {
-      toast("⚠️ Please accept the Terms of Service to proceed.", {
-        style: { border: "1px solid rgba(245,158,11,0.3)", background: "#fffbeb" },
-      });
+    const nameErr = validateField("name", form.name);
+    const emailErr = validateField("email", form.email);
+    const passErr = validateField("password", form.password);
+    const confirmErr = validateField("confirmPassword", form.confirmPassword);
+
+    setTouched({
+      name: true,
+      email: true,
+      password: true,
+      confirmPassword: true,
+    });
+    setErrors({
+      name: nameErr,
+      email: emailErr,
+      password: passErr,
+      confirmPassword: confirmErr,
+    });
+
+    if (nameErr || emailErr || passErr || confirmErr) {
+      toast.error("Please resolve the validation errors to create your account.");
       return;
     }
 
-    if (form.password.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
+    if (!agreeTerms) {
+      toast("⚠️ Please accept the Terms of Service to proceed.", {
+        style: {
+          border: "1px solid rgba(245,158,11,0.3)",
+          background: "#fffbeb",
+        },
+      });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await api.post("/api/auth/register", form);
+      await api.post("/api/auth/register", {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role: form.role,
+      });
       toast.success("Account created successfully! Please sign in.");
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed. Try again.");
+      toast.error(
+        err.response?.data?.message || "Registration failed. Try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -139,7 +242,6 @@ const Register = () => {
               <p>Get started with your free BrandForge account</p>
             </div>
 
-
             {/* Role Selection Radio Cards */}
             <div className="role-selection-group">
               <label className="section-sublabel">Choose your account type:</label>
@@ -147,7 +249,7 @@ const Register = () => {
                 <button
                   type="button"
                   className={`role-select-card ${form.role === "creator" ? "active" : ""}`}
-                  onClick={() => setForm({ ...form, role: "creator" })}
+                  onClick={() => handleChange("role", "creator")}
                 >
                   <div className="role-card-icon">🎨</div>
                   <div className="role-card-info">
@@ -162,7 +264,7 @@ const Register = () => {
                 <button
                   type="button"
                   className={`role-select-card ${form.role === "brand" ? "active" : ""}`}
-                  onClick={() => setForm({ ...form, role: "brand" })}
+                  onClick={() => handleChange("role", "brand")}
                 >
                   <div className="role-card-icon">🏢</div>
                   <div className="role-card-info">
@@ -176,7 +278,7 @@ const Register = () => {
               </div>
             </div>
 
-            <form className="interactive-form" onSubmit={handleSubmit}>
+            <form className="interactive-form" onSubmit={handleSubmit} noValidate>
               {/* Full Name */}
               <div className="input-field-group">
                 <label htmlFor="register-name">Full Name</label>
@@ -192,11 +294,22 @@ const Register = () => {
                     type="text"
                     placeholder="e.g. Samantha Vance"
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
+                    onChange={(e) => handleChange("name", e.target.value)}
+                    onBlur={() => handleBlur("name")}
+                    className={touched.name && errors.name ? "input-has-error" : ""}
                     autoComplete="name"
                   />
                 </div>
+                {touched.name && errors.name && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.name}</span>
+                  </div>
+                )}
               </div>
 
               {/* Email */}
@@ -214,11 +327,22 @@ const Register = () => {
                     type="email"
                     placeholder="name@domain.com"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    onBlur={() => handleBlur("email")}
+                    className={touched.email && errors.email ? "input-has-error" : ""}
                     autoComplete="email"
                   />
                 </div>
+                {touched.email && errors.email && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.email}</span>
+                  </div>
+                )}
               </div>
 
               {/* Password */}
@@ -236,8 +360,9 @@ const Register = () => {
                     type={showPassword ? "text" : "password"}
                     placeholder="At least 6 characters"
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    required
+                    onChange={(e) => handleChange("password", e.target.value)}
+                    onBlur={() => handleBlur("password")}
+                    className={touched.password && errors.password ? "input-has-error" : ""}
                     autoComplete="new-password"
                   />
                   <button
@@ -280,6 +405,77 @@ const Register = () => {
                         {strength.label}
                       </strong>
                     </div>
+                  </div>
+                )}
+
+                {touched.password && errors.password && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.password}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="input-field-group">
+                <label htmlFor="register-confirm-password">Confirm Password</label>
+                <div className="input-with-icon">
+                  <span className="input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                  </span>
+                  <input
+                    id="register-confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    value={form.confirmPassword}
+                    onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                    onBlur={() => handleBlur("confirmPassword")}
+                    className={touched.confirmPassword && errors.confirmPassword ? "input-has-error" : ""}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                        <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                        <line x1="2" x2="22" y1="2" y2="22" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.confirmPassword}</span>
+                  </div>
+                )}
+                {touched.confirmPassword && !errors.confirmPassword && form.confirmPassword && form.password === form.confirmPassword && (
+                  <div className="form-success-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <span>Passwords match perfectly!</span>
                   </div>
                 )}
               </div>
@@ -339,5 +535,6 @@ const Register = () => {
 };
 
 export default Register;
+
 
 

@@ -11,6 +11,8 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("all"); // demo role helper
+  const [touched, setTouched] = useState({});
+  const [errors, setErrors] = useState({});
 
   const navigate = useNavigate();
   const { user, setUser } = useAuth();
@@ -34,14 +36,70 @@ const Login = () => {
     }
   }, [user, navigate]);
 
+  const validateField = (fieldName, value) => {
+    let errorMsg = "";
+    if (fieldName === "email") {
+      const emailTrim = (value || "").trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailTrim) {
+        errorMsg = "Email address is required.";
+      } else if (!emailRegex.test(emailTrim)) {
+        errorMsg = "Please enter a valid email address (e.g. name@company.com).";
+      }
+    } else if (fieldName === "password") {
+      if (!value) {
+        errorMsg = "Password is required.";
+      } else if (value.length < 6) {
+        errorMsg = "Password must be at least 6 characters long.";
+      }
+    }
+    return errorMsg;
+  };
+
+  const handleEmailChange = (e) => {
+    const val = e.target.value;
+    setEmail(val);
+    if (touched.email) {
+      setErrors((prev) => ({ ...prev, email: validateField("email", val) }));
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    setPassword(val);
+    if (touched.password) {
+      setErrors((prev) => ({ ...prev, password: validateField("password", val) }));
+    }
+  };
+
+  const handleBlur = (field) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    const val = field === "email" ? email : password;
+    setErrors((prev) => ({ ...prev, [field]: validateField(field, val) }));
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
 
+    const emailErr = validateField("email", email);
+    const passErr = validateField("password", password);
+
+    setTouched({ email: true, password: true });
+    setErrors({ email: emailErr, password: passErr });
+
+    if (emailErr || passErr) {
+      toast.error("Please resolve form validation errors to sign in.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await api.post("/api/auth/login", { email, password });
+      await api.post("/api/auth/login", {
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
       const { data } = await api.get("/api/auth/me");
       setUser(data);
@@ -77,7 +135,9 @@ const Login = () => {
     setActiveTab(role);
     setEmail(demoEmail);
     setPassword(demoPass);
-    toast.info(`Filled sample credentials for ${role.toUpperCase()}`);
+    setTouched({ email: false, password: false });
+    setErrors({});
+    toast.success(`Filled sample credentials for ${role.toUpperCase()}`);
   };
 
   return (
@@ -152,7 +212,6 @@ const Login = () => {
               <p>Welcome back! Please enter your details to continue.</p>
             </div>
 
-
             {/* Quick Demo Credentials Pill selector */}
             <div className="quick-demo-section">
               <span className="quick-demo-label">Quick Test Login:</span>
@@ -199,7 +258,7 @@ const Login = () => {
               </div>
             </div>
 
-            <form className="interactive-form" onSubmit={handleLogin}>
+            <form className="interactive-form" onSubmit={handleLogin} noValidate>
               {/* Email Field with Icon */}
               <div className="input-field-group">
                 <label htmlFor="login-email">Email Address</label>
@@ -224,11 +283,22 @@ const Login = () => {
                     type="email"
                     placeholder="name@company.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    onChange={handleEmailChange}
+                    onBlur={() => handleBlur("email")}
+                    className={touched.email && errors.email ? "input-has-error" : ""}
                     autoComplete="email"
                   />
                 </div>
+                {touched.email && errors.email && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.email}</span>
+                  </div>
+                )}
               </div>
 
               {/* Password Field with Icon & Toggle */}
@@ -240,7 +310,7 @@ const Login = () => {
                     className="text-link-button"
                     onClick={() =>
                       toast.info(
-                        "Please contact your administrator or reset via backend"
+                        "Please use one of the test login credentials above or reset via administrator."
                       )
                     }
                   >
@@ -276,8 +346,9 @@ const Login = () => {
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••••"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={handlePasswordChange}
+                    onBlur={() => handleBlur("password")}
+                    className={touched.password && errors.password ? "input-has-error" : ""}
                     autoComplete="current-password"
                   />
                   <button
@@ -319,6 +390,16 @@ const Login = () => {
                     )}
                   </button>
                 </div>
+                {touched.password && errors.password && (
+                  <div className="form-error-msg">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errors.password}</span>
+                  </div>
+                )}
               </div>
 
               {/* Remember Me Option */}
@@ -383,4 +464,5 @@ const Login = () => {
 };
 
 export default Login;
+
 

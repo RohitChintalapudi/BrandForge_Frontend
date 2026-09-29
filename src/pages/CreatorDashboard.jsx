@@ -14,6 +14,9 @@ const CreatorDashboard = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [viewCampaign, setViewCampaign] = useState(null);
   const [contentUrl, setContentUrl] = useState("");
+  const [touchedUrl, setTouchedUrl] = useState(false);
+  const [urlError, setUrlError] = useState("");
+  const [isSubmittingPitch, setIsSubmittingPitch] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,27 +68,83 @@ const CreatorDashboard = () => {
     return `${cut.slice(0, lastSpace > 40 ? lastSpace : maxChars).trim()}...`;
   };
 
+  const validateUrl = (val) => {
+    const trimmed = (val || "").trim();
+    if (!trimmed) {
+      return "Media or Drive URL is required.";
+    }
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return "URL must begin with http:// or https://";
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (!parsed.hostname || !parsed.hostname.includes(".")) {
+        return "Please enter a valid web domain address.";
+      }
+    } catch {
+      return "Please enter a valid URL (e.g., https://drive.google.com/...)";
+    }
+    return "";
+  };
+
+  const detectPlatformBadge = (url) => {
+    const s = (url || "").toLowerCase();
+    if (s.includes("drive.google.com")) return "📁 Google Drive";
+    if (s.includes("dropbox.com")) return "📦 Dropbox";
+    if (s.includes("youtube.com") || s.includes("youtu.be")) return "🎥 YouTube";
+    if (s.includes("instagram.com")) return "📸 Instagram";
+    if (s.includes("tiktok.com")) return "🎵 TikTok";
+    if (s.includes("loom.com")) return "🎬 Loom";
+    if (s.includes("vimeo.com")) return "📽️ Vimeo";
+    if (s.includes("onedrive") || s.includes("1drv.ms")) return "☁️ OneDrive";
+    if (/^https?:\/\//i.test(s)) return "🔗 Public Web Link";
+    return null;
+  };
+
+  const handleUrlChange = (val) => {
+    setContentUrl(val);
+    if (touchedUrl) {
+      setUrlError(validateUrl(val));
+    }
+  };
+
   const closeModal = () => {
     setSelectedCampaign(null);
     setContentUrl("");
+    setTouchedUrl(false);
+    setUrlError("");
+    setIsSubmittingPitch(false);
   };
 
   const submitContent = async (e) => {
     e.preventDefault();
+    if (isSubmittingPitch) return;
 
+    setTouchedUrl(true);
+    const err = validateUrl(contentUrl);
+    setUrlError(err);
+
+    if (err) {
+      toast.error(err);
+      return;
+    }
+
+    setIsSubmittingPitch(true);
     try {
       await api.post("/api/submissions", {
         campaignId: selectedCampaign._id,
-        contentUrl,
+        contentUrl: contentUrl.trim(),
       });
 
-      toast.success("Content submitted successfully!");
+      toast.success("Content submitted successfully! 🚀");
       closeModal();
 
       const res = await api.get("/api/submissions/mine");
       setMySubmissions(res.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Submission failed");
+    } finally {
+      setIsSubmittingPitch(false);
     }
   };
 
@@ -989,15 +1048,38 @@ const CreatorDashboard = () => {
 
             <h3 className="c-modal-title">Submit Pitch: {selectedCampaign.title}</h3>
 
-            <form onSubmit={submitContent}>
-              <input
-                type="url"
-                className="c-input"
-                placeholder="Paste public Drive or Media link"
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                required
-              />
+            <form onSubmit={submitContent} noValidate>
+              <div style={{ marginBottom: "1rem" }}>
+                <input
+                  type="url"
+                  className={`c-input ${touchedUrl && urlError ? "input-has-error" : ""}`}
+                  placeholder="e.g. https://drive.google.com/file/d/... or YouTube link"
+                  value={contentUrl}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  onBlur={() => {
+                    setTouchedUrl(true);
+                    setUrlError(validateUrl(contentUrl));
+                  }}
+                  autoFocus
+                />
+
+                {touchedUrl && urlError && (
+                  <div className="form-error-msg" style={{ marginTop: "0.4rem" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{urlError}</span>
+                  </div>
+                )}
+
+                {!urlError && contentUrl && detectPlatformBadge(contentUrl) && (
+                  <div className="url-preview-badge">
+                    <span>{detectPlatformBadge(contentUrl)}</span>
+                  </div>
+                )}
+              </div>
 
               <div className="c-instruction-box">
                 <p>Submission Guidelines</p>
@@ -1010,8 +1092,20 @@ const CreatorDashboard = () => {
                 </ul>
               </div>
 
-              <button type="submit" className="btn-neon-action" style={{ marginTop: "1.5rem", width: "100%" }}>
-                Submit Pitch
+              <button
+                type="submit"
+                className="btn-neon-action"
+                style={{ marginTop: "1.5rem", width: "100%" }}
+                disabled={isSubmittingPitch}
+              >
+                {isSubmittingPitch ? (
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                    <span className="btn-spinner"></span>
+                    Submitting Pitch...
+                  </span>
+                ) : (
+                  "Submit Pitch 🚀"
+                )}
               </button>
             </form>
           </div>
