@@ -10,6 +10,8 @@
 
 This repository contains the **frontend only**. It is a Vite-powered React SPA that talks to the BrandForge REST API over HTTPS using cookie-based JWT authentication. The backend lives in a separate repository (`BrandForge_backend`) deployed on Render at `https://brandforge-backend.onrender.com`.
 
+<img width="1622" height="902" alt="image" src="https://github.com/user-attachments/assets/edf2a494-2ba8-4642-a04a-0a111ef2b9ff" />
+
 ---
 
 ## Table of Contents
