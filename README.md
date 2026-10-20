@@ -1,4 +1,6 @@
-# BrandForge Frontend
+<h1 align="center">BrandForge Frontend</h1>
+
+<div align="center">
 
 > The single-page **React** client for **BrandForge** — a platform that connects **brands** and **content creators** through structured campaigns, contests, and submissions.
 
@@ -8,13 +10,15 @@
 ![Axios](https://img.shields.io/badge/Axios-1.x-5A29E4?style=flat-square&logo=axios&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deployed-Vercel-black?style=flat-square&logo=vercel&logoColor=white)
 
+</div>
+
 This repository contains the **frontend only**. It is a Vite-powered React SPA that talks to the BrandForge REST API over HTTPS using cookie-based JWT authentication. The backend lives in a separate repository (`BrandForge_backend`) deployed on Render at `https://brandforge-backend.onrender.com`.
 
 <img width="1622" height="902" alt="image" src="https://github.com/user-attachments/assets/edf2a494-2ba8-4642-a04a-0a111ef2b9ff" />
 
 ---
 
-## Table of Contents
+<h2 align="center">Table of Contents</h2>
 
 - [Overview](#overview)
 - [Feature Highlights](#feature-highlights)
@@ -44,7 +48,7 @@ This repository contains the **frontend only**. It is a Vite-powered React SPA t
 
 ---
 
-## Overview
+<h2 align="center">Overview</h2>
 
 BrandForge's frontend is a **role-aware SPA**: after login, every user lands on one of three bespoke dashboards —
 
@@ -54,7 +58,7 @@ BrandForge's frontend is a **role-aware SPA**: after login, every user lands on 
 
 The app is deliberately lightweight — **no state-management library, no CSS framework, no TypeScript**. It relies on React 19 function components with hooks, one shared axios instance, one AuthContext, and a hand-crafted **glassmorphic dark theme**.
 
-### At a Glance
+<h3 align="center">At a Glance</h3>
 
 | Property | Value |
 | --- | --- |
@@ -74,21 +78,21 @@ The app is deliberately lightweight — **no state-management library, no CSS fr
 
 ---
 
-## Feature Highlights
+<h2 align="center">Feature Highlights</h2>
 
-### Authentication & Session
+<h3 align="center">Authentication &amp; Session</h3>
 - Split-screen Login/Register with animated **canvas particle-network** background and glass showcase panel
 - Real-time, field-level form validation with `touched` / `error` state and valid/invalid styling
 - Role selector at registration (Creator / Brand) — admin is deliberately not offered in the UI
 - Session restore on every reload via `GET /api/auth/me`, with automatic retry for server cold starts
 - Logout confirmation modal ("Leaving BrandForge?")
 
-### Role Dashboards
+<h3 align="center">Role Dashboards</h3>
 - **Admin** — pending-campaign review grid, one-click approval, stats cards, detail modal, shimmer loading skeletons
 - **Brand** — campaign brief launcher with full client-side validation, owned-campaign list with status badges, submissions viewer, winner selection with confetti celebration, budget stat with commission deduction
 - **Creator** — win/earnings cards with payout amounts and platform-fee note, congratulations banner, campaign brief marketplace, submit-pitch modal with content guidelines
 
-### Platform UX
+<h3 align="center">Platform UX</h3>
 - Role-based redirect from `/` straight to the correct dashboard
 - Route guards that re-verify the session and role with the API before rendering
 - Toast notifications for every API success/failure
@@ -98,7 +102,7 @@ The app is deliberately lightweight — **no state-management library, no CSS fr
 
 ---
 
-## Tech Stack
+<h2 align="center">Tech Stack</h2>
 
 | Layer | Technology | Version | Purpose |
 | --- | --- | --- | --- |
@@ -118,7 +122,7 @@ The app is deliberately lightweight — **no state-management library, no CSS fr
 
 ---
 
-## System Architecture
+<h2 align="center">System Architecture</h2>
 
 ```mermaid
 flowchart LR
@@ -149,7 +153,7 @@ flowchart LR
 
 ---
 
-## Application Bootstrap
+<h2 align="center">Application Bootstrap</h2>
 
 ```mermaid
 flowchart TD
@@ -171,9 +175,9 @@ The retry loop is intentional: the Render free tier spins the API down after ina
 
 ---
 
-## Routing & Guards
+<h2 align="center">Routing &amp; Guards</h2>
 
-### Route Table
+<h3 align="center">Route Table</h3>
 
 | Path | Component | Access |
 | --- | --- | --- |
@@ -184,7 +188,7 @@ The retry loop is intentional: the Render free tier spins the API down after ina
 | `/brand` | `BrandDashboard` | `ProtectedRoute role="brand"` |
 | `/creator` | `CreatorDashboard` | `ProtectedRoute role="creator"` |
 
-### Guard Decision Flow
+<h3 align="center">Guard Decision Flow</h3>
 
 ```mermaid
 flowchart TD
@@ -203,7 +207,7 @@ flowchart TD
 
 ---
 
-## Project Structure
+<h2 align="center">Project Structure</h2>
 
 ```text
 BrandForge_Frontend/
@@ -238,7 +242,7 @@ BrandForge_Frontend/
 
 ---
 
-## Component Architecture
+<h2 align="center">Component Architecture</h2>
 
 ```mermaid
 flowchart TD
@@ -265,7 +269,7 @@ flowchart TD
 
 ---
 
-## Authentication Flow
+<h2 align="center">Authentication Flow</h2>
 
 ```mermaid
 sequenceDiagram
@@ -314,7 +318,7 @@ sequenceDiagram
 
 ---
 
-## Admin Dashboard
+<h2 align="center">Admin Dashboard</h2>
 
 **Route:** `/admin` · **Data:** `GET /api/campaigns/pending` + `GET /api/campaigns`
 
@@ -329,11 +333,11 @@ sequenceDiagram
 
 ---
 
-## Brand Dashboard
+<h2 align="center">Brand Dashboard</h2>
 
 **Route:** `/brand` · **Data:** `GET /api/campaigns`, `GET /api/submissions/campaign/:id`, `PUT /api/submissions/:id/winner`, `POST /api/campaigns`
 
-### Campaign Brief Launcher
+<h3 align="center">Campaign Brief Launcher</h3>
 
 | Field | Client-side rules |
 | --- | --- |
@@ -344,12 +348,12 @@ sequenceDiagram
 
 Submit → `POST /api/campaigns` → toast "Campaign created (pending admin approval)" → form reset → list refresh.
 
-### Budget & Commission Model (display logic)
+<h3 align="center">Budget &amp; Commission Model (display logic)</h3>
 
 - Remaining budget = **₹50,000 baseline** − Σ(3% × each owned campaign's reward)
 - Purely presentational — computed client-side from the campaign list, not from a backend wallet.
 
-### Submissions & Winner Selection
+<h3 align="center">Submissions &amp; Winner Selection</h3>
 
 1. "View Submissions" on an owned campaign → `GET /api/submissions/campaign/:id`
 2. Each pitch card shows creator name, avatar initial, content link, status (Reviewing / 🏆 Winner)
@@ -358,7 +362,7 @@ Submit → `POST /api/campaigns` → toast "Campaign created (pending admin appr
 
 ---
 
-## Creator Dashboard
+<h2 align="center">Creator Dashboard</h2>
 
 **Route:** `/creator` · **Data:** `GET /api/campaigns`, `GET /api/submissions/mine`, `GET /api/submissions/my-wins`, `POST /api/submissions`
 
@@ -376,7 +380,7 @@ Earnings math lives in [`src/utils/creatorPrizes.js`](src/utils/creatorPrizes.js
 
 ---
 
-## API Integration Map
+<h2 align="center">API Integration Map</h2>
 
 The frontend consumes **13 of the backend's 24 endpoints**. Dashboard statistics are computed client-side from list endpoints — the backend `/api/analytics/*` routes are currently unused.
 
@@ -428,7 +432,7 @@ flowchart LR
     CD --> E13
 ```
 
-### Endpoint Usage by Role
+<h3 align="center">Endpoint Usage by Role</h3>
 
 | Endpoint | Register/Login | Navbar | Admin | Brand | Creator |
 | --- | :---: | :---: | :---: | :---: | :---: |
@@ -450,7 +454,7 @@ flowchart LR
 
 ---
 
-## Client-Side Validation
+<h2 align="center">Client-Side Validation</h2>
 
 All forms follow the same **touched/error pattern**: a field validates only after first blur; from then on it re-validates on every keystroke; the submit button disables while any visible error exists.
 
@@ -466,7 +470,7 @@ flowchart TD
     SUB["onSubmit"] --> A["validate all fields"] --> E
 ```
 
-### Validation Matrix
+<h3 align="center">Validation Matrix</h3>
 
 | Form | Field | Rule |
 | --- | --- | --- |
@@ -482,7 +486,7 @@ flowchart TD
 | Brand campaign | deadline | Required; tomorrow or later (`min` attribute blocks past dates in the picker) |
 | Creator submit | contentUrl | Required; `type="url"` browser check (server re-validates the `http(s)` format) |
 
-### Frontend vs Backend Bounds
+<h3 align="center">Frontend vs Backend Bounds</h3>
 
 The client applies **stricter** rules than the API — a deliberate UX decision; the backend remains the source of truth:
 
@@ -495,7 +499,7 @@ The client applies **stricter** rules than the API — a deliberate UX decision;
 
 ---
 
-## Cold-Start Resilience
+<h2 align="center">Cold-Start Resilience</h2>
 
 The backend runs on Render's free tier, which spins down after ~15 minutes of inactivity. The frontend treats the first failed request as "server waking up" rather than "logged out":
 
@@ -515,7 +519,7 @@ The same screen doubles as the **submitting state** on Login and Register, cover
 
 ---
 
-## Winner Selection Flow
+<h2 align="center">Winner Selection Flow</h2>
 
 The flagship end-to-end interaction across all three roles:
 
@@ -556,7 +560,7 @@ sequenceDiagram
 
 ---
 
-## Styling & Design System
+<h2 align="center">Styling &amp; Design System</h2>
 
 A single **glassmorphic dark theme** across the app, expressed in two layers:
 
@@ -583,7 +587,7 @@ A single **glassmorphic dark theme** across the app, expressed in two layers:
 
 ---
 
-## Codebase Distribution
+<h2 align="center">Codebase Distribution</h2>
 
 ~**6,200 lines** of source across 14 files. The dashboards are the heart of the app — the three page components plus their inline styles account for roughly half the codebase.
 
@@ -610,14 +614,14 @@ pie showData
 
 ---
 
-## Getting Started
+<h2 align="center">Getting Started</h2>
 
-### Prerequisites
+<h3 align="center">Prerequisites</h3>
 
 - **Node.js 20.19+** (or 22.12+) — required by Vite 7
 - The BrandForge backend running locally (`http://localhost:5000`) or reachable at its Render URL — see the backend repository's README for setup
 
-### Installation
+<h3 align="center">Installation</h3>
 
 ```bash
 # 1. Clone the repository
@@ -635,7 +639,7 @@ The app runs at `http://localhost:5173`.
 
 > **Local API note:** the axios base URL is hardcoded to the deployed backend. To develop against a local backend, change `baseURL` in [`src/api/axios.js`](src/api/axios.js) to `http://localhost:5000` — and make sure the backend's CORS allowlist already includes `http://localhost:5173` (it does).
 
-### Available Scripts
+<h3 align="center">Available Scripts</h3>
 
 | Command | Description |
 | --- | --- |
@@ -646,7 +650,7 @@ The app runs at `http://localhost:5173`.
 
 ---
 
-## Configuration
+<h2 align="center">Configuration</h2>
 
 There are **no environment variables** in use. The one piece of runtime configuration is the API base URL, hardcoded in [`src/api/axios.js`](src/api/axios.js):
 
@@ -661,7 +665,7 @@ Changing environments means editing this one line (see [Roadmap](#roadmap) for t
 
 ---
 
-## Deployment
+<h2 align="center">Deployment</h2>
 
 The frontend deploys to **Vercel** as a static SPA.
 
@@ -677,7 +681,7 @@ The frontend deploys to **Vercel** as a static SPA.
 
 ---
 
-## Conventions
+<h2 align="center">Conventions</h2>
 
 - **Components** — one default-exported function component per file; hooks only; no classes.
 - **Data fetching** — always through the shared `api` instance; never raw `fetch`; errors surface as toasts with `err.response?.data?.message` preferred.
@@ -688,7 +692,7 @@ The frontend deploys to **Vercel** as a static SPA.
 
 ---
 
-## Known Limitations
+<h2 align="center">Known Limitations</h2>
 
 1. **API base URL is hardcoded** in `src/api/axios.js` — switching between local and deployed backends requires a code edit.
 2. **Dashboard stats are client-computed.** The backend's `/api/analytics/*` endpoints are unused; win counts and campaign totals derive from list endpoints.
@@ -701,7 +705,7 @@ The frontend deploys to **Vercel** as a static SPA.
 
 ---
 
-## Roadmap
+<h2 align="center">Roadmap</h2>
 
 - [ ] Move the API base URL to a `VITE_API_URL` environment variable
 - [ ] Extract a shared form-validation utility (reusable touched/error pattern)
@@ -715,7 +719,7 @@ The frontend deploys to **Vercel** as a static SPA.
 
 ---
 
-## Contributing
+<h2 align="center">Contributing</h2>
 
 1. Branch from `main` using a descriptive name (e.g., `validations`, `feat/xyz`).
 2. Follow the existing commit style: `feat(scope): summary`, `fix(scope): summary`, `style(scope): summary`.
