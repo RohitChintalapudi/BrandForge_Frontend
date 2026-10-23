@@ -57,7 +57,7 @@ BrandForge's frontend is a **role-aware SPA**: after login, every user lands on 
 - **Creators** browse approved campaign briefs, submit content links, and track their wins and earnings.
 - **Admins** review the queue of pending campaigns and approve them into the public marketplace.
 
-The app is deliberately lightweight — **no state-management library, no TypeScript**. It relies on React 19 function components with hooks, one shared axios instance, one AuthContext, and a hybrid styling layer: **Tailwind CSS 4** utilities composed on top of a large hand-written **glassmorphic custom stylesheet**.
+The app is deliberately lightweight — **no state-management library, no TypeScript**. It relies on React 19 function components with hooks, one shared axios instance, one AuthContext, and a hybrid styling layer: **Tailwind CSS 4** wired in through Vite, plus a ~4,000-line hand-written **purple/white glassmorphic stylesheet**.
 
 <h3 align="center">At a Glance</h3>
 
@@ -90,9 +90,9 @@ The app is deliberately lightweight — **no state-management library, no TypeSc
 - Logout confirmation modal ("Are you sure you want to log out?") with Escape-key dismiss
 
 <h3 align="center">Role Dashboards</h3>
-- **Admin** — pending-campaign review grid, one-click approval, stats cards, detail modal, shimmer loading skeletons
-- **Brand** — campaign brief launcher with full client-side validation, owned-campaign list with status badges, submissions viewer, winner selection with confetti celebration, budget stat with commission deduction
-- **Creator** — win/earnings cards with payout amounts and platform-fee note, congratulations banner, campaign brief marketplace, submit-pitch modal with content guidelines
+- **Admin** — moderation explorer with search, sort (newest / highest reward / urgent deadline), and pending-vs-all pills; executive metrics bar; one-click approval; inspector modal
+- **Brand** — campaign brief launcher modal with full client-side validation, metrics bar, searchable campaign explorer, submissions view with a winner spotlight and 5-second confetti celebration
+- **Creator** — open-opportunity / pitch / win / earnings metrics, marketplace explorer with filter pills, brief inspector, and a pitch modal with URL validation and content guidelines
 
 <h3 align="center">Platform UX</h3>
 - Role-based redirect from `/` straight to the correct dashboard
@@ -345,12 +345,13 @@ sequenceDiagram
 
 | UI Section | Behavior |
 | --- | --- |
-| Hero + stats cards | Live counts of **Pending Reviews** and **Approved Campaigns** |
-| Campaign review grid | Pending campaigns as glass cards: title, truncated description, reward, deadline, Pending badge |
-| Approve button | `PUT /api/campaigns/:id/approve` → toast, card removed optimistically, approved count +1 |
-| Details modal | Full description + meta grid + approve action |
-| Empty state | "All Campaigns Reviewed" when the queue is clear |
-| Loading | Shimmer skeleton cards |
+| Control header | "Admin Oversight & Moderation" banner with a **Refresh Queue** button |
+| Metrics bar | Pending Approval · Verified & Live · Pending Reward Pool (₹ sum across the queue) · System Health |
+| Moderation explorer | Search by title / description / reward; sort **Newest First / Highest Reward / Urgent Deadline**; filter pills for **Pending** vs **All Campaigns** |
+| Campaign cards | Title, truncated description, offered reward, deadline, status badge — open the inspector or approve inline |
+| Approve & Publish | `PUT /api/campaigns/:id/approve` → toast, card removed optimistically from the pending queue, counts update |
+| Inspector modal | Reward Pool, Deadline, Moderation Status + the full description |
+| Empty state | "Queue is completely clear!" (pending) or "No campaigns found" (all) |
 
 ---
 
@@ -358,28 +359,33 @@ sequenceDiagram
 
 **Route:** `/brand` · **Data:** `GET /api/campaigns`, `GET /api/submissions/campaign/:id`, `PUT /api/submissions/:id/winner`, `POST /api/campaigns`
 
+<h3 align="center">Metrics Bar</h3>
+
+Four stat cards: **Total Campaigns**, **Live & Approved**, **Pending Review**, and an **Instant Action** card that opens the campaign launcher.
+
 <h3 align="center">Campaign Brief Launcher</h3>
+
+Creation happens in a modal ("New Launch" badge) opened from the header or the Instant Action card.
 
 | Field | Client-side rules |
 | --- | --- |
-| `title` | Required; 5–50 characters after trim |
-| `description` | Required; 20–800 characters after trim |
-| `reward` | Required; positive number; minimum **₹500** |
+| `title` | Required; 5–100 characters after trim |
+| `description` | Required; 20–2,000 characters after trim |
+| `reward` | Required; parsed numeric value ≥ **₹500** |
 | `deadline` | Required; date input with `min` = tomorrow; must be tomorrow or later |
 
-Submit → `POST /api/campaigns` → toast "Campaign created (pending admin approval)" → form reset → list refresh.
+Submit → `POST /api/campaigns` → toast "Campaign created successfully! (Pending admin review) 🚀" → form reset → list refresh.
 
-<h3 align="center">Budget &amp; Commission Model (display logic)</h3>
+<h3 align="center">Campaign Explorer</h3>
 
-- Remaining budget = **₹50,000 baseline** − Σ(3% × each owned campaign's reward)
-- Purely presentational — computed client-side from the campaign list, not from a backend wallet.
+Search across titles and descriptions, plus status pills for **All / Approved / Pending**. Each card shows the offer, deadline, status badge, and a **Submissions** action.
 
 <h3 align="center">Submissions &amp; Winner Selection</h3>
 
-1. "View Submissions" on an owned campaign → `GET /api/submissions/campaign/:id`
-2. Each pitch card shows creator name, avatar initial, content link, status (Reviewing / 🏆 Winner)
-3. "Select Winner" → `PUT /api/submissions/:id/winner` → optimistic status update
-4. "View Selected Winner" reveals a winner banner with a **5-second confetti burst** (`react-confetti`)
+1. "Submissions" on an owned campaign → `GET /api/submissions/campaign/:id` swaps the explorer for a detail view with a **"Back to All Campaigns"** breadcrumb
+2. If a winner already exists, a **Winner Spotlight** banner shows the creator's name, "View Winning Content ↗", and a **Celebrate 🎉** button
+3. The submissions grid lists every pitch — creator name, avatar initial, content link, and status (Reviewing / 🏆 Winner)
+4. "Select Winner" → `PUT /api/submissions/:id/winner` → toast "🏆 Winner crowned successfully!" → spotlight replaces the grid and a **5-second confetti burst** plays (`react-confetti`)
 
 ---
 
@@ -389,15 +395,13 @@ Submit → `POST /api/campaigns` → toast "Campaign created (pending admin appr
 
 | UI Section | Behavior |
 | --- | --- |
-| Hero stats | **Total Wins** and **Open Campaigns** counts |
-| Congratulations banner | Appears when `wins.length > 0` |
-| My Wins & Earnings | Win cards with campaign title, payout amount, link to winning submission |
-| Platform fee note | "* 5% platform fee will be automatically deducted upon withdrawal" |
-| Latest Campaign Briefs | Marketplace grid; already-submitted campaigns show a green **Submitted** badge instead of the action button |
-| Submit Pitch modal | URL input + submission guidelines (1080p, stability, audio, brief match, public link) → `POST /api/submissions` |
-| Brief modal | Full campaign details view |
+| Metrics bar | **Open Opportunities** (approved campaigns not yet pitched), **Pitches Submitted**, **Crowned Wins**, **Total Earnings** |
+| Wins spotlight | Banner when `wins.length > 0`, summing awarded earnings with a **🏆 Celebrate Wins (n)** toggle |
+| Campaign marketplace | Approved campaigns with search + filter pills **All / Open to Pitch (n) / Submitted / Wins**; already-pitched cards show a green **Submitted** badge |
+| Brief modal | Full campaign brief (reward, deadline, description) with a **Submit Pitch Now 🚀** action |
+| Pitch modal | Content-URL field with inline validation, plus submission guidelines (1080p, stable footage, audio quality, brief match, public link) → `POST /api/submissions` |
 
-Earnings math lives in [`src/utils/creatorPrizes.js`](src/utils/creatorPrizes.js): it resolves a win's campaign reference against the campaign list (falls back when the API returns an unpopulated id), parses numeric rewards (₹ prefix, `en-IN` locale formatting), and either sums numeric prizes or joins non-numeric ones with `+`.
+Earnings math lives in [`src/utils/creatorPrizes.js`](src/utils/creatorPrizes.js): it resolves a win's campaign reference against the campaign list (falls back when the API returns an unpopulated id), parses numeric rewards (₹ prefix, `en-IN` locale formatting), and either sums numeric prizes or joins non-numeric ones with `+`. The metrics bar and wins spotlight both feed from the same helper.
 
 ---
 
@@ -574,39 +578,42 @@ sequenceDiagram
     Br->>SPA: Select Winner
     SPA->>API: PUT /api/submissions/:id/winner
     API-->>SPA: 200 (status: winner)
-    SPA-->>Br: Confetti + winner banner
+    SPA-->>Br: Winner spotlight + 5s confetti
 
     Cr->>SPA: Reload /creator
     SPA->>API: GET /api/submissions/my-wins
-    SPA-->>Cr: Win card + payout amount (+ fee note)
+    SPA-->>Cr: Win card, Crowned Wins + Total Earnings metrics
 ```
 
 ---
 
 <h2 align="center">Styling &amp; Design System</h2>
 
-A single **glassmorphic dark theme** across the app, expressed in two layers:
+A single **purple / white glass** design system (the stylesheet's own header reads "PURPLE, WHITE & BLACK"), expressed in two layers:
 
-1. **Global stylesheet** — [`src/styles/global.css`](src/styles/global.css) (2,170 lines): design tokens, reset, navbar, split-screen auth layout, canvas layer, logout modal, buttons.
-2. **Scoped inline styles** — each dashboard renders its own `<style>` block with a prefixed variable namespace (`--admin-*`, `--b-*`, `--c-*`) so three premium themes coexist without collisions.
+1. **Global stylesheet** — [`src/styles/global.css`](src/styles/global.css) (~4,018 lines) beginning with `@import "tailwindcss"`: design tokens, reset, navbar, split-screen auth layout, dashboard grids, modals, and keyframe animations.
+2. **Tailwind CSS 4** — wired through `@tailwindcss/vite` in [`vite.config.js`](vite.config.js). Utilities are available everywhere but used sparingly; components rely on semantic class names for the heavy lifting.
 
-| Design token family | Example | Used by |
+There are **no inline `<style>` blocks** left in any component — all styling now lives in the global sheet.
+
+| Design token | Value | Role |
 | --- | --- | --- |
-| `--admin-*` | `--admin-bg: #0b081a` | AdminDashboard |
-| `--b-*` | `--b-primary: #7c3aed` | BrandDashboard |
-| `--c-*` | `--c-gold: #fbbf24` | CreatorDashboard |
-| `--purple-*`, `--white-*` | `--purple-2: #7c3aed` | global.css |
+| `--purple`, `--purple-dark`, `--purple-light` | `#8b5cf6`, `#7c3aed`, `#a78bfa` | Primary accent, gradients, links |
+| `--black`, `--white` | `#0a0a0a`, `#ffffff` | Text and surfaces |
+| `--light-bg`, `--card-bg` | `#f8f9fa`, `#ffffff` | Page and card backgrounds |
+| `--text`, `--text-light` | `#1f2937`, `#6b7280` | Body and muted text |
+| `--border` | `#e5e7eb` | Hairline borders |
 
 **Signature elements**
 
-- Dark violet backgrounds (`#0a071b` / `#070514` / `#0b081a`) with blurred, floating ambient glow blobs (purple / indigo / pink)
-- Glass cards: `rgba(255,255,255,0.03)` surfaces + `backdrop-filter: blur(16px)` + hairline borders
-- Neon gradient action buttons (`#7c3aed → #4f46e5`) with hover lift and glow
-- Shimmer skeleton loading cards; animated empty states
-- Gradient hero titles; uppercase micro-labels; gold (`#fbbf24`) for reward/winner accents
-- Fonts: **Outfit**, **Plus Jakarta Sans**, **Inter** (system fallbacks)
-- Canvas particle-network animation on auth pages (28 particles, ≤110px link distance, purple)
-- Responsive breakpoints at 768px; `en-IN` locale number formatting for rupee amounts
+- **Inter** as the single typeface (system fallbacks); `en-IN` formatting for rupee amounts
+- Purple→indigo gradient actions (`#8b5cf6 → #7c3aed → #4f46e5`) with hover lift
+- Frosted white navbar: `rgba(255,255,255,0.88)` + `backdrop-filter: blur(16px)`
+- Fixed **ambient glow blobs** (blurred purple radial gradients with 10–12s float loops) and a dotted mesh overlay behind auth and dashboard pages
+- Dark indigo/violet **showcase panels** paired with white form panels in the split-screen auth card
+- Metric stat cards with status badges ("Needs Action", "Live", "Escrow Pool"), winner spotlight with a glow pulse, modal pop-in animations, and a form-error shake
+- Scrollbars are hidden globally (scrolling still works) for a cleaner surface
+- Responsive breakpoints at 1024, 920, 900, 768, 600, and 480 px
 
 ---
 
