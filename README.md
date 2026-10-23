@@ -85,8 +85,8 @@ The app is deliberately lightweight — **no state-management library, no TypeSc
 - Split-screen Login/Register with animated **canvas particle-network** background and glass showcase panel
 - Real-time, field-level form validation with `touched` / `error` state and valid/invalid styling
 - Role selector at registration (Creator / Brand) — admin is deliberately not offered in the UI
-- Session restore on every reload via `GET /api/auth/me`, with automatic retry for server cold starts
-- Logout confirmation modal ("Leaving BrandForge?")
+- Session restore on every reload via a single-shot `GET /api/auth/me`, with a branded spinner while it resolves
+- Logout confirmation modal ("Are you sure you want to log out?") with Escape-key dismiss
 
 <h3 align="center">Role Dashboards</h3>
 - **Admin** — pending-campaign review grid, one-click approval, stats cards, detail modal, shimmer loading skeletons
@@ -95,9 +95,9 @@ The app is deliberately lightweight — **no state-management library, no TypeSc
 
 <h3 align="center">Platform UX</h3>
 - Role-based redirect from `/` straight to the correct dashboard
-- Route guards that re-verify the session and role with the API before rendering
-- Toast notifications for every API success/failure
-- Free-tier cold-start handling: branded warm-up screen with rotating status messages while the Render server wakes up
+- Route guards that trust `AuthContext` — unauthenticated or wrong-role users go to `/login` before any dashboard renders
+- Toast notifications (`react-hot-toast`) for every API success/failure
+- Free-tier cold-start handling: the 12s axios timeout turns a sleeping Render instance into a fast logged-out state instead of a hung UI
 - Creator "Total won" badge in the navbar with aggregated earnings and fee tooltip
 - Fully responsive layouts with mobile breakpoints
 
@@ -132,7 +132,7 @@ flowchart LR
     subgraph BROWSER["User's Browser"]
         direction TB
         R["React 19 SPA<br/>routes · dashboards · forms"]
-        AC["AuthContext<br/>session restore + retry"]
+        AC["AuthContext<br/>single-shot session restore"]
         AX["axios instance<br/>withCredentials: true"]
         R --> AC
         R --> AX
@@ -162,19 +162,21 @@ flowchart LR
 flowchart TD
     MAIN["main.jsx<br/>ReactDOM.createRoot"] --> BR["BrowserRouter"]
     BR --> AP["AuthProvider"]
-    AP --> FU{"GET /api/auth/me<br/>on mount"}
-    FU -- "server asleep (free tier)" --> RETRY{"attempt ≤ 15?"}
-    RETRY -- "yes" --> WAIT["wait 2s"] --> FU
-    RETRY -- "no" --> NULL["user = null"]
+    MAIN --> TOASTER["react-hot-toast Toaster<br/>top-right · 3.5s"]
+
+    AP --> FU{"GET /api/auth/me<br/>single attempt on mount"}
     FU -- "200 OK" --> USER["user = profile<br/>role = brand | creator | admin"]
+    FU -- "401 · network error<br/>12s timeout" --> NULL["user = null"]
     USER & NULL --> LD["loading = false"]
+
+    AP -. "while loading" .-> LS["LoadingSpinner<br/>'Checking authentication...'"]
+
     LD --> APP["App renders"]
     APP --> NAV["Navbar"]
-    APP --> ROUTES["Routes<br/>/ · /login · /register<br/>/admin · /brand · /creator"]
-    ROUTES -. "while loading" .-> SLS["ServerLoadingScreen"]
+    APP --> ROUTES["Routes<br/>/ · /login · /register · /signup<br/>/admin · /brand · /creator · *"]
 ```
 
-The retry loop is intentional: the Render free tier spins the API down after inactivity, and the first request can take 20–50 seconds to come back. The app polls up to **15 times × 2s (≈30s)** while showing the branded warm-up screen before falling back to the logged-out state.
+Session restore is a **single-shot** `GET /api/auth/me` guarded by an `isMounted` flag — there is **no retry loop**. If the free-tier Render instance is asleep, axios aborts after its **12-second timeout** and the app falls back to the logged-out state, showing the login page instead of hanging on a splash screen. The branded `LoadingSpinner` covers the initial check; dashboard fetches that hit a cold start surface a toast and the user retries manually.
 
 ---
 
@@ -187,26 +189,27 @@ The retry loop is intentional: the Render free tier spins the API down after ina
 | `/` | `HomeRedirect` | Redirects by role (or to `/login`) |
 | `/login` | `Login` | Public |
 | `/register` | `Register` | Public |
+| `/signup` | `Register` | Public alias of `/register` |
 | `/admin` | `AdminDashboard` | `ProtectedRoute role="admin"` |
 | `/brand` | `BrandDashboard` | `ProtectedRoute role="brand"` |
 | `/creator` | `CreatorDashboard` | `ProtectedRoute role="creator"` |
+| `*` | — | `Navigate` back to `/` (then role redirect) |
 
 <h3 align="center">Guard Decision Flow</h3>
 
 ```mermaid
 flowchart TD
-    NAV["User navigates to /brand"] --> PR["ProtectedRoute"]
-    PR --> ME{"GET /api/auth/me"}
-    ME -- "error" --> DENY["status = denied"]
-    ME -- "200" --> ROLE{"res.data.role === 'brand'?"}
+    NAV["User navigates to /brand"] --> PR["ProtectedRoute role='brand'"]
+    PR --> LD{"AuthContext.loading?"}
+    LD -- "yes" --> SPIN["LoadingSpinner<br/>'Verifying session...'"]
+    LD -- "no" --> AUTH{"user?"}
+    AUTH -- "null" --> DENY["Navigate to /login"]
+    AUTH -- "present" --> ROLE{"user.role === 'brand'?"}
     ROLE -- "no" --> DENY
-    ROLE -- "yes" --> ALLOW["status = allowed"]
-    PR -. "status = loading" .-> SLS["ServerLoadingScreen"]
-    DENY --> L["Navigate to /login"]
-    ALLOW --> CHILD["render BrandDashboard"]
+    ROLE -- "yes" --> CHILD["render BrandDashboard"]
 ```
 
-`HomeRedirect` performs the same role switch without hitting the API (it trusts `AuthContext.user`): admin → `/admin`, brand → `/brand`, creator → `/creator`, otherwise → `/login`.
+`ProtectedRoute` is a pure context consumer: it never calls the API itself, it only reads `user` and `loading` from `AuthContext`, which performs the single `/api/auth/me` request. `HomeRedirect` shows the same spinner (`"Checking authentication..."`) until loading settles, then switches on role — admin → `/admin`, brand → `/brand`, creator → `/creator`, otherwise → `/login`. Unknown paths hit the catch-all and re-enter that same redirect.
 
 ---
 
@@ -216,23 +219,24 @@ flowchart TD
 BrandForge_Frontend/
 ├── index.html                    # Shell: favicon, viewport, #root mount
 ├── vercel.json                   # SPA rewrite: all routes → /index.html
-├── vite.config.js                # Vite + React plugin
+├── vite.config.js                # Vite + React + Tailwind plugins
 ├── eslint.config.js              # ESLint 9 flat config
 ├── public/                       # favicon.png, logo.png, vite.svg
 └── src/
-    ├── main.jsx                  # Bootstrap: BrowserRouter → AuthProvider → App + ToastContainer
-    ├── App.jsx                   # Route table + role-based home redirect
+    ├── main.jsx                  # Bootstrap: BrowserRouter → AuthProvider → App + Toaster
+    ├── App.jsx                   # Route table, /signup alias, catch-all, role home redirect
     ├── api/
-    │   └── axios.js              # Single axios instance (baseURL + withCredentials)
+    │   └── axios.js              # Single axios instance (baseURL + credentials + 12s timeout)
     ├── auth/
-    │   ├── Login.jsx             # Split-screen login + particle canvas + validation
-    │   └── Register.jsx          # Registration with role select + validation
+    │   ├── Login.jsx             # Split-screen login + demo quick-fill + validation
+    │   └── Register.jsx          # Registration: role cards, password strength, validation
     ├── components/
-    │   ├── Navbar.jsx            # Brand bar, creator earnings badge, logout modal
-    │   ├── ProtectedRoute.jsx    # Role guard backed by /api/auth/me
-    │   └── ServerLoadingScreen.jsx # Free-tier warm-up screen
+    │   ├── Navbar.jsx            # Brand bar, profile capsule, logout modal
+    │   ├── ProtectedRoute.jsx    # Role guard backed by AuthContext (no API call)
+    │   ├── LoadingSpinner.jsx    # Branded spinner for session checks
+    │   └── ServerLoadingScreen.jsx # Legacy warm-up screen — no longer imported
     ├── context/
-    │   └── AuthContext.jsx       # user state, session restore with retry, logout
+    │   └── AuthContext.jsx       # user state, single-shot session restore, logout
     ├── pages/
     │   ├── AdminDashboard.jsx    # Pending campaign review + approval
     │   ├── BrandDashboard.jsx    # Campaign creation, submissions, winner selection
@@ -240,7 +244,7 @@ BrandForge_Frontend/
     ├── utils/
     │   └── creatorPrizes.js      # Prize parsing, currency totals, win→campaign resolution
     └── styles/
-        └── global.css            # Theme variables, navbar, auth layout, shared UI
+        └── global.css            # Tailwind import + theme variables, navbar, auth, shared UI
 ```
 
 ---
@@ -250,25 +254,28 @@ BrandForge_Frontend/
 ```mermaid
 flowchart TD
     MAIN["main.jsx"] --> AP["AuthProvider<br/>(AuthContext)"]
-    MAIN --> TC["ToastContainer"]
+    MAIN --> TOAST["react-hot-toast Toaster"]
     AP --> APP["App"]
-
-    APP --> SLS["ServerLoadingScreen<br/>(while loading)"]
-    APP --> NAV["Navbar"]
 
     APP --> HR["HomeRedirect"]
     APP --> LOGIN["Login"]
-    APP --> REGISTER["Register"]
+    APP --> REGISTER["Register<br/>(/register · /signup)"]
 
     APP --> PR1["ProtectedRoute admin"] --> ADMIN["AdminDashboard"]
     APP --> PR2["ProtectedRoute brand"] --> BRAND["BrandDashboard"]
     APP --> PR3["ProtectedRoute creator"] --> CREATOR["CreatorDashboard"]
 
-    NAV --> CP["creatorPrizes.js<br/>totalWonSummary"]
-    CREATOR --> CP2["creatorPrizes.js<br/>prizeForWin · titleForWin"]
-    LOGIN & REGISTER & BRAND & ADMIN & CREATOR --> API["api/axios.js"]
+    APP --> NAV["Navbar"]
+    AP -. "loading" .-> LS["LoadingSpinner"]
+    HR -. "loading" .-> LS
+    PR1 & PR2 & PR3 -. "loading" .-> LS
+
+    CREATOR --> CP["creatorPrizes.js<br/>prizeForWin · titleForWin · totalWonSummary"]
+    AP & LOGIN & REGISTER & BRAND & ADMIN & CREATOR --> API["api/axios.js"]
     API --> BE["BrandForge API on Render"]
 ```
+
+`LoadingSpinner` (a 34-line branded spinner with a "B" core and dot bar) is the only loading UI still referenced — `ServerLoadingScreen` remains on disk but nothing imports it. `Navbar` is display-only: it reads the user from context and renders the profile capsule, with no data fetching of its own.
 
 ---
 
@@ -504,21 +511,20 @@ The client applies **stricter** rules than the API — a deliberate UX decision;
 
 <h2 align="center">Cold-Start Resilience</h2>
 
-The backend runs on Render's free tier, which spins down after ~15 minutes of inactivity. The frontend treats the first failed request as "server waking up" rather than "logged out":
+The backend runs on Render's free tier, which spins down after ~15 minutes of inactivity and can take 20–50 seconds to answer its first request. The current build handles this with **time boxing rather than polling** — every request is capped by axios at 12 seconds, and session restore makes exactly one attempt:
 
 ```mermaid
 flowchart TD
-    LOAD["App loads / route guard"] --> REQ["GET /api/auth/me"]
+    LOAD["App loads · route guard"] --> REQ["GET /api/auth/me<br/>(single attempt)"]
     REQ --> RES{"Response?"}
-    RES -- "200" --> LIVE["Render session · proceed"]
-    RES -- "network error / 5xx" --> WARM["ServerLoadingScreen<br/>'Warming up the server...'"]
-    WARM --> LOOP{"attempt < 15?"}
-    LOOP -- "yes (every 2s)" --> REQ
-    LOOP -- "no" --> OUT["Treat as logged out"]
-    LIVE & OUT & WARM --> UX["Rotating messages:<br/>Waking up the server · Spinning up the engines ·<br/>Connecting to the cloud · Loading your data"]
+    RES -- "200" --> LIVE["Session restored · render dashboard"]
+    RES -- "401" --> GUEST["user = null"]
+    RES -- "network error / 5xx<br/>/ 12s timeout" --> GUEST
+    LOAD -. "while loading" .-> SPIN["LoadingSpinner<br/>'Checking authentication...'"]
+    GUEST --> LOGIN["HomeRedirect → /login"]
 ```
 
-The same screen doubles as the **submitting state** on Login and Register, covering slow auth round-trips.
+Earlier versions polled `/api/auth/me` up to 15 times × 2s behind a full-screen "warming up the server" splash. That has been removed: the app now resolves to the logged-out state quickly, and if the API wakes up afterwards the login form simply works. The trade-off is that a sleeping server during a **dashboard** fetch produces an error toast instead of an automatic retry — the user refreshes or resubmits (tracked in [Known Limitations](#known-limitations)).
 
 ---
 
