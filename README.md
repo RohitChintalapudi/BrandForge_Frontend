@@ -415,7 +415,6 @@ flowchart LR
         RC["Register"]
         LG["Login"]
         ACX["AuthContext"]
-        NB["Navbar"]
         AD["AdminDashboard"]
         BD["BrandDashboard"]
         CD["CreatorDashboard"]
@@ -442,8 +441,6 @@ flowchart LR
     LG --> E3
     ACX --> E3
     ACX --> E4
-    NB --> E6
-    NB --> E13
     AD --> E5
     AD --> E6
     AD --> E7
@@ -459,13 +456,13 @@ flowchart LR
 
 <h3 align="center">Endpoint Usage by Role</h3>
 
-| Endpoint | Register/Login | Navbar | Admin | Brand | Creator |
+| Endpoint | Auth screens | AuthContext | Admin | Brand | Creator |
 | --- | :---: | :---: | :---: | :---: | :---: |
 | `POST /api/auth/register` | ✓ | | | | |
 | `POST /api/auth/login` | ✓ | | | | |
-| `GET /api/auth/me` | ✓ (Login, ProtectedRoute, AuthContext) | | | | |
-| `POST /api/auth/logout` | | ✓ (via AuthContext) | | | |
-| `GET /api/campaigns` | | ✓ | ✓ | ✓ | ✓ |
+| `GET /api/auth/me` | ✓ (Login) | ✓ | | | |
+| `POST /api/auth/logout` | | ✓ | | | |
+| `GET /api/campaigns` | | | ✓ | ✓ | ✓ |
 | `GET /api/campaigns/pending` | | | ✓ | | |
 | `PUT /api/campaigns/:id/approve` | | | ✓ | | |
 | `POST /api/campaigns` | | | | ✓ | |
@@ -473,9 +470,9 @@ flowchart LR
 | `PUT /api/submissions/:id/winner` | | | | ✓ | |
 | `POST /api/submissions` | | | | | ✓ |
 | `GET /api/submissions/mine` | | | | | ✓ |
-| `GET /api/submissions/my-wins` | | ✓ | | | ✓ |
+| `GET /api/submissions/my-wins` | | | | | ✓ |
 
-> Unused backend capabilities: `PUT /api/auth/profile`, `PUT /api/auth/password`, `PUT /api/campaigns/:id` (edit), `PUT /api/campaigns/:id/complete`, `PUT /api/campaigns/:id/reject`, `DELETE /api/campaigns/:id`, `PUT /api/submissions/:id/review`, and all three `/api/analytics/*` routes.
+> **Navbar makes no API calls** — it reads the user from context; logout is delegated to `AuthContext`. Unused backend capabilities remain: `PUT /api/auth/profile`, `PUT /api/auth/password`, `PUT /api/campaigns/:id` (edit), `PUT /api/campaigns/:id/complete`, `PUT /api/campaigns/:id/reject`, `DELETE /api/campaigns/:id`, `PUT /api/submissions/:id/review`, and all three `/api/analytics/*` routes.
 
 ---
 
@@ -619,28 +616,28 @@ There are **no inline `<style>` blocks** left in any component — all styling n
 
 <h2 align="center">Codebase Distribution</h2>
 
-~**6,200 lines** of source across 14 files. The dashboards are the heart of the app — the three page components plus their inline styles account for roughly half the codebase.
+~**7,865 lines** of source across 15 files. Styling dominates: the centralized `global.css` is roughly half the codebase, while the three dashboards together account for about a quarter.
 
 ```mermaid
 pie showData
     title Source lines by area
-    "Pages (3 dashboards)" : 3074
-    "Global stylesheet" : 2170
-    "Auth screens" : 587
-    "Shared components" : 201
-    "Core (App, main, context, api)" : 132
+    "Global stylesheet" : 4018
+    "Pages (3 dashboards)" : 2111
+    "Auth screens" : 1069
+    "Shared components" : 428
+    "Core (App, main, context, api)" : 179
     "Utils (creatorPrizes)" : 60
 ```
 
 ```mermaid
 pie showData
     title Lines per dashboard page
-    "BrandDashboard.jsx" : 1270
-    "CreatorDashboard.jsx" : 1095
-    "AdminDashboard.jsx" : 709
+    "BrandDashboard.jsx" : 841
+    "CreatorDashboard.jsx" : 746
+    "AdminDashboard.jsx" : 524
 ```
 
-> Note: each dashboard's inline `<style>` block is included in its line count — the rendered UI plus `global.css` make CSS roughly half the project.
+> Line counts are `wc -l` on the current `main` tree. Shared components include `ServerLoadingScreen.jsx` (91 lines), which is still counted even though nothing imports it.
 
 ---
 
@@ -716,8 +713,9 @@ The frontend deploys to **Vercel** as a static SPA.
 
 - **Components** — one default-exported function component per file; hooks only; no classes.
 - **Data fetching** — always through the shared `api` instance; never raw `fetch`; errors surface as toasts with `err.response?.data?.message` preferred.
-- **Validation** — the touched/error pattern (see [Client-Side Validation](#client-side-validation)); every form disables its submit button while invalid.
-- **Styling** — global.css for shared chrome; namespaced inline `<style>` blocks with a per-dashboard prefix for dashboard themes; class names follow the prefix (`b-`, `c-`, `admin-`).
+- **Notifications** — import `toast` from `react-hot-toast`; the `react-toastify` package is dead code.
+- **Validation** — the touched/error pattern (see [Client-Side Validation](#client-side-validation)); every form re-validates all fields on submit and refuses to advance while errors remain.
+- **Styling** — all CSS belongs in `global.css`; Tailwind 4 utilities are available but used sparingly; do not add inline `<style>` blocks. Class names follow the component prefix (`b-`, `c-`, `admin-`).
 - **IDs** — user and object ids can arrive as `_id`, `id`, or populated objects; use the `getIdValue` / `getCampaignIdFromRef` coercion helpers rather than assuming a shape.
 - **Dates & money** — `toLocaleDateString` for deadlines; `toLocaleString("en-IN")` for rupee amounts.
 
@@ -726,13 +724,13 @@ The frontend deploys to **Vercel** as a static SPA.
 <h2 align="center">Known Limitations</h2>
 
 1. **API base URL is hardcoded** in `src/api/axios.js` — switching between local and deployed backends requires a code edit.
-2. **Dashboard stats are client-computed.** The backend's `/api/analytics/*` endpoints are unused; win counts and campaign totals derive from list endpoints.
-3. **Brand "Remaining Budget" is cosmetic** — a ₹50,000 baseline minus 3% commission per campaign, with no backend wallet to back it.
-4. **Validation lives inside each component** — Login, Register, and the campaign form duplicate similar logic instead of sharing validators.
-5. **Cold-start retry is fixed** at 15 × 2s and applies only to `/api/auth/me`; other dashboards' initial fetches can fail with an error toast during a cold start.
+2. **Dashboard stats are client-computed.** The backend's `/api/analytics/*` endpoints are unused; win counts, earnings, and pending reward pools derive from list endpoints.
+3. **Validation lives inside each component** — Login, Register, the campaign form, and the pitch URL check duplicate similar logic instead of sharing validators.
+4. **No automatic cold-start retry.** A sleeping Render instance resolves to the logged-out state after the 12s timeout, and dashboard fetches fail with an error toast; the user must refresh or resubmit.
+5. **Demo credentials are hardcoded** in `Login.jsx` for the Quick Test Login buttons — convenient for demos, but they should be behind a dev flag before production.
 6. **Campaign editing, rejection, completion, deletion, and submission review/feedback have no UI** — those backend endpoints are unexposed.
-7. **No TypeScript, no test suite, no CI** — `npm run lint` is the only static check.
-8. **Inline `<style>` blocks bloat the page components** (~600–900 lines each); they ship with the JS bundle and are re-parsed per mount.
+7. **Legacy leftovers** — `react-toastify` is still a dependency and `ServerLoadingScreen.jsx` (91 lines) is still in the tree, though neither is imported anymore.
+8. **No TypeScript, no test suite, no CI** — `npm run lint` is the only static check.
 
 ---
 
@@ -743,10 +741,12 @@ The frontend deploys to **Vercel** as a static SPA.
 - [ ] Surface the backend analytics endpoints in the dashboards
 - [ ] Add submission review/feedback UI for brands
 - [ ] Add campaign edit/complete/reject actions to the brand and admin dashboards
-- [ ] Extract dashboard inline styles into CSS modules
+- [ ] Add retry/backoff for cold-start failures on dashboard fetches
+- [ ] Gate the Quick Test Login demo credentials behind a dev flag
+- [ ] Remove the unused `react-toastify` dependency and `ServerLoadingScreen.jsx`
+- [ ] Split the ~4,000-line `global.css` into per-feature stylesheets
 - [ ] Add an error boundary around route outlets
 - [ ] Add Playwright/Vitest smoke tests for auth and the three dashboards
-- [ ] Toast-driven retry for cold-start failures on dashboard fetches
 
 ---
 
