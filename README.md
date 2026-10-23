@@ -8,6 +8,7 @@
 ![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![React Router](https://img.shields.io/badge/React_Router-7-CA4245?style=flat-square&logo=reactrouter&logoColor=white)
 ![Axios](https://img.shields.io/badge/Axios-1.x-5A29E4?style=flat-square&logo=axios&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deployed-Vercel-black?style=flat-square&logo=vercel&logoColor=white)
 
 </div>
@@ -56,7 +57,7 @@ BrandForge's frontend is a **role-aware SPA**: after login, every user lands on 
 - **Creators** browse approved campaign briefs, submit content links, and track their wins and earnings.
 - **Admins** review the queue of pending campaigns and approve them into the public marketplace.
 
-The app is deliberately lightweight — **no state-management library, no CSS framework, no TypeScript**. It relies on React 19 function components with hooks, one shared axios instance, one AuthContext, and a hand-crafted **glassmorphic dark theme**.
+The app is deliberately lightweight — **no state-management library, no TypeScript**. It relies on React 19 function components with hooks, one shared axios instance, one AuthContext, and a hybrid styling layer: **Tailwind CSS 4** utilities composed on top of a large hand-written **glassmorphic custom stylesheet**.
 
 <h3 align="center">At a Glance</h3>
 
@@ -69,8 +70,8 @@ The app is deliberately lightweight — **no state-management library, no CSS fr
 | HTTP client | Single axios instance with `withCredentials: true` |
 | Authentication | JWT in `httpOnly` cookie — never touched by JS |
 | State management | Local `useState` + one `AuthContext` |
-| Styling | Hand-written CSS (glassmorphic dark) — no framework |
-| Notifications | react-toastify (dark theme, 3s auto-close) |
+| Styling | Tailwind CSS 4 (`@tailwindcss/vite`) + hand-written glassmorphic CSS |
+| Notifications | react-hot-toast (top-right, white theme, 3.5s auto-close) |
 | Celebrations | react-confetti (winner selection) |
 | Dev server | `http://localhost:5173` (Vite default) |
 | Production | Vercel — `https://brand-forge-frontend.vercel.app` |
@@ -110,15 +111,17 @@ The app is deliberately lightweight — **no state-management library, no CSS fr
 | Bundler / dev server | Vite | `^7.2.4` | Dev server with HMR, production builds |
 | Vite plugin | @vitejs/plugin-react | `^5.1.1` | JSX transform + Fast Refresh |
 | Routing | react-router-dom | `^7.11.0` | `BrowserRouter`, `Routes`, `Navigate` |
-| HTTP client | axios | `^1.13.2` | API calls with cookie credentials |
-| Notifications | react-toastify | `^11.0.5` | Success/error toasts (dark theme) |
+| HTTP client | axios | `^1.13.2` | API calls with cookie credentials; 12s timeout |
+| Notifications | react-hot-toast | `^2.4.1` | Success/error toasts (`<Toaster position="top-right">`, 3.5s) |
 | Celebration | react-confetti | `^6.4.0` | Confetti burst on winner selection |
+| Styling | Tailwind CSS 4 | `^4.1.18` | Utility classes, `@import "tailwindcss"` in `global.css` |
+| Styling (build) | @tailwindcss/vite | `^4.1.18` | Tailwind Vite plugin |
+| Custom CSS | Vanilla CSS | — | Hand-written glassmorphic theme in one global stylesheet |
 | Linting | ESLint (flat config) | `^9.39.1` | `eslint-plugin-react-hooks`, `react-refresh` |
 | Language | JavaScript (ES modules) | — | No TypeScript |
-| Styling | Vanilla CSS | — | One global stylesheet + scoped inline `<style>` blocks |
 | Deployment | Vercel | — | Static hosting with SPA rewrites |
 
-> There is no test framework configured. `npm run lint` is the only static check.
+> There is no test framework configured. `npm run lint` is the only static check. The older `react-toastify` (`^11.0.5`) is still listed in `package.json` but is no longer imported anywhere — all notifications go through `react-hot-toast`.
 
 ---
 
@@ -652,16 +655,17 @@ The app runs at `http://localhost:5173`.
 
 <h2 align="center">Configuration</h2>
 
-There are **no environment variables** in use. The one piece of runtime configuration is the API base URL, hardcoded in [`src/api/axios.js`](src/api/axios.js):
+There are **no environment variables** in use. All runtime configuration lives in [`src/api/axios.js`](src/api/axios.js):
 
 ```js
 const api = axios.create({
   baseURL: "https://brandforge-backend.onrender.com",
   withCredentials: true, // sends the httpOnly JWT cookie
+  timeout: 12000, // 12s cap — a cold Render instance surfaces as a toast
 });
 ```
 
-Changing environments means editing this one line (see [Roadmap](#roadmap) for the planned `VITE_API_URL` migration).
+Changing environments means editing the `baseURL` line (see [Roadmap](#roadmap) for the planned `VITE_API_URL` migration). The 12-second timeout is what makes Render's free-tier cold starts fail fast into a toast instead of hanging the UI indefinitely.
 
 ---
 
