@@ -82,9 +82,10 @@ The app is deliberately lightweight — **no state-management library, no TypeSc
 <h2 align="center">Feature Highlights</h2>
 
 <h3 align="center">Authentication &amp; Session</h3>
-- Split-screen Login/Register with animated **canvas particle-network** background and glass showcase panel
+- Split-screen Login/Register with a glass showcase panel (metric pills + testimonial)
+- **Quick Test Login** buttons that autofill seeded demo accounts for all three roles
 - Real-time, field-level form validation with `touched` / `error` state and valid/invalid styling
-- Role selector at registration (Creator / Brand) — admin is deliberately not offered in the UI
+- Registration with tailored **Creator / Brand role cards**, a live password-strength meter, and a terms checkbox — admin is deliberately not offered in the UI
 - Session restore on every reload via a single-shot `GET /api/auth/me`, with a branded spinner while it resolves
 - Logout confirmation modal ("Are you sure you want to log out?") with Escape-key dismiss
 
@@ -98,7 +99,7 @@ The app is deliberately lightweight — **no state-management library, no TypeSc
 - Route guards that trust `AuthContext` — unauthenticated or wrong-role users go to `/login` before any dashboard renders
 - Toast notifications (`react-hot-toast`) for every API success/failure
 - Free-tier cold-start handling: the 12s axios timeout turns a sleeping Render instance into a fast logged-out state instead of a hung UI
-- Creator "Total won" badge in the navbar with aggregated earnings and fee tooltip
+- Role-aware navbar with a profile capsule, initials avatar, and color-coded role pill
 - Fully responsive layouts with mobile breakpoints
 
 ---
@@ -277,6 +278,16 @@ flowchart TD
 
 `LoadingSpinner` (a 34-line branded spinner with a "B" core and dot bar) is the only loading UI still referenced — `ServerLoadingScreen` remains on disk but nothing imports it. `Navbar` is display-only: it reads the user from context and renders the profile capsule, with no data fetching of its own.
 
+<h3 align="center">Navbar</h3>
+
+| Element | Behavior |
+| --- | --- |
+| Logo badge | SVG stack icon + "BrandForge" / "Collab Hub" wordmark; links to the role's dashboard |
+| Guest actions | Sign In link + Get Started CTA when no user is signed in |
+| Profile capsule | Initials avatar, display name (falls back to the email prefix), role pill, connection dot |
+| Role pill | 👑 Admin · 🏢 Brand · 🎨 Creator, each with its own color treatment |
+| Logout | Opens the confirmation modal; Escape closes it; the button shows "Logging out..." until the request settles |
+
 ---
 
 <h2 align="center">Authentication Flow</h2>
@@ -289,33 +300,31 @@ sequenceDiagram
     participant API as Express API (Render)
 
     Note over U,SPA: Registration
-    U->>SPA: Fill name, email, password, role
-    SPA->>SPA: Field-level validation (touched → error)
+    U->>SPA: Name, email, password + role card (creator | brand)
+    SPA->>SPA: Field validation · strength meter · terms checkbox
     SPA->>API: POST /api/auth/register
     API-->>SPA: 201 Created
     SPA-->>U: Toast + redirect to /login
 
-    Note over U,SPA: Login
-    U->>SPA: Email + password
+    Note over U,SPA: Login (or Quick Test Login)
+    U->>SPA: Email + password (demo buttons autofill a seeded account)
     SPA->>API: POST /api/auth/login
     API-->>SPA: Set-Cookie: token (httpOnly, Secure, SameSite=None)
     SPA->>API: GET /api/auth/me
     API-->>SPA: {id, name, email, role}
     SPA->>SPA: setUser(me) in AuthContext
-    SPA-->>U: Redirect by role → dashboard
+    SPA-->>U: Personalized toast + redirect by role
 
     Note over U,SPA: Session restore (every reload)
     SPA->>API: GET /api/auth/me (cookie sent automatically)
     alt server awake
         API-->>SPA: 200 profile → user restored
-    else free-tier cold start
-        SPA->>SPA: retry every 2s (max 15) + warm-up screen
-        SPA->>API: GET /api/auth/me
-        API-->>SPA: 200 profile → user restored
+    else 401 / network error / 12s timeout
+        SPA-->>U: Logged-out state → /login
     end
 
     Note over U,SPA: Logout
-    U->>SPA: Logout → confirm modal
+    U->>SPA: Logout → confirmation modal
     SPA->>API: POST /api/auth/logout (clears cookie)
     SPA->>SPA: setUser(null) → redirect /login
 ```
@@ -323,8 +332,10 @@ sequenceDiagram
 **Notes**
 
 - The JWT never appears in JS — the browser stores it as an `httpOnly` cookie and axios attaches it via `withCredentials: true`.
-- The role select on Register offers **Creator** and **Brand** only; admin accounts are not creatable from the UI.
-- Login performs a follow-up `/api/auth/me` call so the context holds the full profile, not just the login response.
+- Registration offers **Creator** and **Brand** only; admin accounts are not creatable from the UI.
+- **Quick Test Login** fills `creator@brandforge.io`, `brand@brandforge.io`, or `admin@brandforge.io` — all with password `Password123!` (seeded demo accounts).
+- Login performs a follow-up `/api/auth/me` call so the context holds the full profile, not just the login response, then shows a personalized toast and redirects by role.
+- Logout tolerates network failure: the local session is cleared and the user is returned to `/login` even if the API call fails.
 
 ---
 
@@ -466,7 +477,7 @@ flowchart LR
 
 <h2 align="center">Client-Side Validation</h2>
 
-All forms follow the same **touched/error pattern**: a field validates only after first blur; from then on it re-validates on every keystroke; the submit button disables while any visible error exists.
+All forms follow the same **touched/error pattern**: a field validates only after first blur; from then on it re-validates on every keystroke; submitting re-validates every field and refuses to advance while any error remains. Submit buttons disable while a request is in flight.
 
 ```mermaid
 flowchart TD
@@ -474,8 +485,8 @@ flowchart TD
     CH -- "no" --> OK["no error shown yet"]
     CH -- "yes" --> V["run validator(field)"]
     V --> E{"error?"}
-    E -- "yes" --> RED["is-invalid styling<br/>inline message · button disabled"]
-    E -- "no" --> GRN["is-valid styling<br/>button enabled"]
+    E -- "yes" --> RED["is-invalid styling<br/>inline message · submit blocked"]
+    E -- "no" --> GRN["is-valid styling"]
     BLUR["onBlur"] --> T["mark touched"] --> V
     SUB["onSubmit"] --> A["validate all fields"] --> E
 ```
@@ -486,26 +497,29 @@ flowchart TD
 | --- | --- | --- |
 | Login | email | Required; regex `^[^\s@]+@[^\s@]+\.[^\s@]+$` |
 | Login | password | Required; ≥ 6 characters |
-| Register | name | Required; ≥ 2 characters after trim |
+| Register | name | Required; 2–50 characters after trim; letters, spaces, `.`, `'`, `-` only |
 | Register | email | Required; same email regex |
-| Register | password | Required; ≥ 6 characters |
-| Register | role | Select: `creator` \| `brand` (no admin) |
-| Brand campaign | title | Required; 5–50 characters after trim |
-| Brand campaign | description | Required; 20–800 characters after trim |
-| Brand campaign | reward | Required; positive number; ≥ ₹500 |
+| Register | password | Required; ≥ 6 characters; must mix letters with a number or symbol; feeds the strength meter |
+| Register | confirmPassword | Required; must match password; re-checked live when the password changes |
+| Register | role | Role cards: `creator` \| `brand` (no admin) |
+| Register | agreeTerms | Must be checked before submit (amber warning toast otherwise) |
+| Brand campaign | title | Required; 5–100 characters after trim |
+| Brand campaign | description | Required; 20–2,000 characters after trim |
+| Brand campaign | reward | Required; parsed numeric value ≥ **₹500** |
 | Brand campaign | deadline | Required; tomorrow or later (`min` attribute blocks past dates in the picker) |
-| Creator submit | contentUrl | Required; `type="url"` browser check (server re-validates the `http(s)` format) |
+| Creator submit | contentUrl | Required; must start with `http://` or `https://` and its hostname must contain a dot |
 
 <h3 align="center">Frontend vs Backend Bounds</h3>
 
-The client applies **stricter** rules than the API — a deliberate UX decision; the backend remains the source of truth:
+The client applies its own rules — deliberately stricter or more structured than the API schema; the backend remains the source of truth:
 
 | Field | Frontend | Backend |
 | --- | --- | --- |
-| Campaign title | 5–50 chars | 3–150 chars |
-| Campaign description | 20–800 chars | 10–3000 chars |
+| Campaign title | 5–100 chars | 3–150 chars |
+| Campaign description | 20–2,000 chars | 10–3000 chars |
 | Campaign deadline | tomorrow+ | ≥ 1 hour ahead |
-| Password | ≥ 6 chars | ≥ 6 chars + one letter + one number |
+| Password | ≥ 6 chars + letter + number/symbol | ≥ 6 chars + one letter + one number |
+| Submission URL | `http(s)://` + dotted hostname | server re-validates the format |
 
 ---
 
